@@ -132,7 +132,7 @@ function Paywall({ onUnlock }: { onUnlock: () => void }) {
           variant="outline"
           className="h-12 w-full border-foreground bg-foreground text-sm font-semibold uppercase tracking-wide text-background hover:bg-foreground/90 hover:text-background"
         >
-           Pay
+           Pay with Apple Pay
         </Button>
         <p className="text-center text-[11px] text-muted-foreground">
           Secure checkout · Mock transaction for demo
