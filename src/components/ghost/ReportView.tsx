@@ -72,7 +72,7 @@ export function ReportView({
 
         {/* Sidebar */}
         <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
-          <RepairCostTracker total={total} count={checkedIssues.size} />
+          <RepairCostTracker total={total} count={checkedIssues.length} />
           <NegotiationScript
             vehicle={vehicle}
             askingPrice={askingPrice}
