@@ -38,12 +38,12 @@ const VERDICT_CONFIG = {
 
 export function RecommendationCard({
   recommendation,
-  issues,
+  issues = [],
 }: {
-  recommendation: ReportRecommendation;
-  issues: Issue[];
+  recommendation?: ReportRecommendation; // Přidán otazník pro maximální bezpečnost typu
+  issues?: Issue[];
 }) {
-  // Ochrana před spadnutím, pokud objekt recommendation nebo vlastnost verdict chybí
+  // 1. ABSOLUTNÍ OCHRANA: Pokud cokoliv chybí, komponenta bezpečně vykreslí fallback a k .verdict vůbec nepřistoupí
   if (!recommendation || !recommendation.verdict) {
     return (
       <div className="mt-10 space-y-4">
@@ -51,13 +51,15 @@ export function RecommendationCard({
           Overall Recommendation
         </h2>
         <div className="rounded-xl border border-border bg-card p-5 text-center text-sm text-muted-foreground">
-          No recommendation data available.
+          Generating recommendation details...
         </div>
       </div>
     );
   }
 
-  const vc = VERDICT_CONFIG[recommendation.verdict] || VERDICT_CONFIG.negotiate;
+  // 2. BEZPEČNÉ VOLÁNÍ: Inicializace konfigurace probíhá až ZA ověřením existence dat
+  const currentVerdict = recommendation.verdict || "negotiate";
+  const vc = VERDICT_CONFIG[currentVerdict] || VERDICT_CONFIG.negotiate;
   const VIcon = vc.icon;
 
   return (
@@ -92,18 +94,21 @@ export function RecommendationCard({
           </h3>
           <div className="mt-4 space-y-5">
             {recommendation.roadmap.map((group) => {
-              const cfg = URGENCY_CONFIG[group.urgency] || URGENCY_CONFIG.Monitor;
+              if (!group) return null;
+              
+              const currentUrgency = group.urgency || "Monitor";
+              const cfg = URGENCY_CONFIG[currentUrgency] || URGENCY_CONFIG.Monitor;
               const Icon = cfg.icon;
               const groupIssues = Array.isArray(issues) 
-                ? issues.filter((i) => group.issueIds?.includes(i.id))
+                ? issues.filter((i) => group.issueIds?.includes(i?.id))
                 : [];
 
               return (
-                <div key={group.urgency}>
+                <div key={group.urgency || Math.random().toString()}>
                   <div className="flex items-center gap-2">
                     <Icon className={`h-4 w-4 ${cfg.color}`} />
                     <span className={`font-condensed text-xs font-semibold uppercase tracking-wider ${cfg.color}`}>
-                      {group.label}
+                      {group.label || "Notice"}
                     </span>
                   </div>
                   <p className="mt-1 text-[12px] text-muted-foreground">{group.reason}</p>
