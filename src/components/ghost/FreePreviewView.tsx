@@ -115,7 +115,7 @@ export function FreePreviewView({
           className="cta-active mt-6 h-14 w-full bg-primary text-base font-semibold text-primary-foreground shadow-[0_2px_12px_rgba(178,34,34,0.18)] hover:bg-primary/90"
         >
           <CreditCard className="mr-2 h-4 w-4" />
-          Unlock Full Report — $9.99
+          Unlock Full Report — $4.99
         </Button>
         <p className="mt-3 text-center text-[12px] text-muted-foreground">
           One-time payment. No subscription. Works for this listing only.
