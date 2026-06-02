@@ -81,10 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Idle Check — Inspect any used car listing before you go see it" },
       { name: "description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
       { name: "author", content: "Idle Check" },
-      { property: "og:title", content: "Idle Check — Used car listing inspector" },
-      { property: "og:description", content: "Paste any listing. Get the inspection checklist, repair costs, and negotiation script — before you drive out to see it." },
+      { property: "og:title", content: "Idle Check — Inspect any used car listing before you go see it" },
+      { property: "og:description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Idle Check — Inspect any used car listing before you go see it" },
+      { name: "twitter:description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ee87f736-e32f-4e11-a712-940fb502e1d5/id-preview-6474e130--cc02cf92-2420-4fa1-b63c-ed6b2782e3ca.lovable.app-1780386337733.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ee87f736-e32f-4e11-a712-940fb502e1d5/id-preview-6474e130--cc02cf92-2420-4fa1-b63c-ed6b2782e3ca.lovable.app-1780386337733.png" },
     ],
     links: [
       {
