@@ -1,109 +1,100 @@
-import { useState, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/ghost/Navbar";
-import { Footer } from "@/components/ghost/Footer";
-import { LandingView, type LandingSubmit } from "@/components/ghost/LandingView";
-import { ScanningView } from "@/components/ghost/ScanningView";
-import { FreePreviewView } from "@/components/ghost/FreePreviewView";
-import { ReportView } from "@/components/ghost/ReportView";
-import {
-  detectMarketplace, generateIssues, generateRecalls,
-  generateRecommendation, parseVehicle,
-} from "@/lib/ghost/procedural";
+import { useMemo, useState } from "react";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { InspectionChecklist } from "./InspectionChecklist";
+import { RepairCostTracker } from "./RepairCostTracker";
+import { NegotiationScript } from "./NegotiationScript";
+import { RecallSection } from "./RecallSection";
+import { RecommendationCard } from "./RecommendationCard";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Idle Check — Inspect any used car listing before you go see it" },
-      { name: "description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
-    ],
-  }),
-  component: Index,
-});
+export function ReportView({
+  vehicle, marketplace, askingPrice, issues, recalls, recommendation, onNewReport,
+}: {
+  vehicle: Vehicle; marketplace: string; askingPrice: number;
+  issues: Issue[]; recalls: Recall[];
+  recommendation: ReportRecommendation; onNewReport: () => void;
+}) {
+  const [checked, setChecked] = useState<Set<string>>(new Set());
 
-type Phase = "landing" | "scanning" | "preview" | "report";
+  const toggle = (id: string) => setChecked((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
-export interface AnalysisState {
-  vehicle: Vehicle;
-  marketplace: string;
-  askingPrice: number;
-  issues: Issue[];
-  recalls: Recall[];
-  recommendation: ReportRecommendation;
-  timestamp: number;
-}
+  const checkedIssues = useMemo(() => issues.filter((i) => checked.has(i.id)), [issues, checked]);
 
-const STORAGE_KEY = "idle-check-history";
+  const partsTotal = checkedIssues.reduce((s, i) => s + Math.round((i.partsCostMin + i.partsCostMax) / 2), 0);
+  const labourTotal = checkedIssues.reduce((s, i) => s + Math.round(i.labourHours * 120), 0);
+  const grandTotal = partsTotal + labourTotal;
+  const suggestedOffer = Math.max(0, Math.round(askingPrice - grandTotal * 0.65));
 
-function loadHistory(): AnalysisState[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
+  const recommendedIds = useMemo(() => new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id)), [issues]);
 
-function saveToHistory(entry: AnalysisState) {
-  try {
-    const prev = loadHistory();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...prev].slice(0, 10)));
-  } catch {}
-}
-
-function Index() {
-  const [phase, setPhase] = useState<Phase>("landing");
-  const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
-  const [history, setHistory] = useState<AnalysisState[]>([]);
-
-  useEffect(() => { setHistory(loadHistory()); }, []);
-
-  const handleAnalyze = (data: LandingSubmit) => {
-    const vehicle = parseVehicle({
-      text: data.manualText, make: data.make, model: data.model,
-      year: data.year, engineType: data.engineType,
-      mileage: data.mileage, vin: data.vin,
-    });
-    const marketplace = detectMarketplace(data.manualText);
-    const issues = generateIssues(vehicle);
-    const recalls = generateRecalls(vehicle);
-    const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
-    const entry: AnalysisState = {
-      vehicle, marketplace, askingPrice: data.askingPrice,
-      issues, recalls, recommendation, timestamp: Date.now(),
-    };
-    setAnalysis(entry);
-    saveToHistory(entry);
-    setHistory(loadHistory());
-    setPhase("scanning");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goHome = () => { setPhase("landing"); setAnalysis(null); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const yearStr = vehicle.year ? `${vehicle.year} ` : "";
+  const trimStr = vehicle.trim ? ` (${vehicle.trim})` : "";
+  const mileageStr = vehicle.mileage != null ? ` · ${vehicle.mileage.toLocaleString()} mi` : "";
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar
-        onLogoClick={phase !== "landing" ? goHome : undefined}
-        showNewReport={phase === "report"}
-        onNewReport={goHome}
-      />
-      <main className="relative z-10 flex-1">
-        {phase === "landing" && <LandingView onSubmit={handleAnalyze} history={history} onLoadHistory={(e) => { setAnalysis(e); setPhase("report"); window.scrollTo({ top: 0 }); }} />}
-        {phase === "scanning" && <ScanningView onDone={() => { setPhase("preview"); window.scrollTo({ top: 0 }); }} />}
-        {phase === "preview" && analysis && <FreePreviewView vehicle={analysis.vehicle} issues={analysis.issues} onUnlock={() => { setPhase("report"); window.scrollTo({ top: 0 }); }} />}
-        {phase === "report" && analysis && (
-          <ReportView
-            vehicle={analysis.vehicle}
-            marketplace={analysis.marketplace}
-            askingPrice={analysis.askingPrice}
-            issues={analysis.issues}
-            recalls={analysis.recalls}
-            recommendation={analysis.recommendation}
-            onNewReport={goHome}
+    <section className="view-fade-in relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+
+      {/* Status bar */}
+      <div className="rounded-xl border border-border bg-card p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">Full Report Unlocked</div>
+            <div className="mt-1 text-base font-bold sm:text-lg">
+              {yearStr}{vehicle.make} {vehicle.model}{trimStr}
+              {vehicle.engineType && <span className="ml-2 font-condensed text-[13px] font-normal text-muted-foreground">{vehicle.engineType}</span>}
+              <span className="font-normal text-muted-foreground">{mileageStr} · Asked on {marketplace}</span>
+            </div>
+            {vehicle.vin && (
+              <div className="mt-1 font-mono text-[11px] text-muted-foreground">VIN: {vehicle.vin}</div>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="font-condensed text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Asking Price</div>
+              <div className="font-mono text-xl font-bold tabular-nums">${askingPrice.toLocaleString()}</div>
+            </div>
+            <Button onClick={onNewReport} variant="outline" size="sm"
+              className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary">
+              <PlusCircle className="h-3.5 w-3.5" />
+              New Report
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Recommendation */}
+      <RecommendationCard recommendation={recommendation} issues={issues} />
+
+      {/* Main grid */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inspection Checklist</h2>
+            {recommendedIds.size > 0 && (
+              <span className="font-condensed text-[11px] text-muted-foreground">
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
+                {recommendedIds.size} recommended to check
+              </span>
+            )}
+          </div>
+          <InspectionChecklist issues={issues} checked={checked} onToggle={toggle} recommendedIds={recommendedIds} />
+        </div>
+
+        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <RepairCostTracker issues={issues} checked={checked} askingPrice={askingPrice} />
+          <NegotiationScript
+            vehicle={vehicle} askingPrice={askingPrice}
+            checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
           />
-        )}
-      </main>
-      <Footer />
-    </div>
+        </div>
+      </div>
+
+      <RecallSection recalls={recalls} />
+    </section>
   );
 }
