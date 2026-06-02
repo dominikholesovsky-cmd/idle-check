@@ -39,11 +39,11 @@ export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps)
           )}
           <div className="flex items-center gap-3">
             <span className="relative inline-flex h-3 w-3 items-center justify-center">
-              <span className="absolute h-3 w-3 rounded-full bg-primary/30 sonar-ring" />
-              <span className="absolute h-3 w-3 rounded-full bg-primary/30 sonar-ring delay-1" />
-              <span className="absolute h-3 w-3 rounded-full bg-primary/30 sonar-ring delay-2" />
-              <span className="relative h-2 w-2 rounded-full bg-primary" />
-            </span>
+  <span className="absolute h-3 w-3 rounded-full bg-green-500/30 sonar-ring" />
+  <span className="absolute h-3 w-3 rounded-full bg-green-500/30 sonar-ring delay-1" />
+  <span className="absolute h-3 w-3 rounded-full bg-green-500/30 sonar-ring delay-2" />
+  <span className="relative h-2 w-2 rounded-full bg-green-500" />
+</span>
             <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground sm:inline sm:text-xs">
               <span>IDLE</span>
               <span className="mx-1 text-[#9CA3AF]">//</span>
