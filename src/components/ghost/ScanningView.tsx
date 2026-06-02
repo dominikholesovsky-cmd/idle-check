@@ -18,13 +18,12 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
   const [charIdx, setCharIdx] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Typewriter
+  // Typewriter effect
   useEffect(() => {
     if (done) return;
     if (lineIdx >= SCAN_LINES.length) {
       setDone(true);
-      const t = setTimeout(onDone, 600);
-      return () => clearTimeout(t);
+      return;
     }
     const line = SCAN_LINES[lineIdx];
     if (charIdx <= line.length) {
@@ -34,7 +33,6 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
       }, 18);
       return () => clearTimeout(t);
     }
-    // Line complete -> commit, stagger 400ms
     const t = setTimeout(() => {
       setVisible((v) => [...v, line]);
       setCurrent("");
@@ -42,7 +40,14 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
       setLineIdx((i) => i + 1);
     }, 400);
     return () => clearTimeout(t);
-  }, [lineIdx, charIdx, done, onDone]);
+  }, [lineIdx, charIdx, done]);
+
+  // Transition to next view after done
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(onDone, 600);
+    return () => clearTimeout(t);
+  }, [done]);
 
   const isFinalLine = (s: string) => s.trim() === "Report ready.";
 
@@ -59,7 +64,7 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
           {visible.map((line, i) => (
             <div key={i} className="flex gap-2">
               <span className="text-green-500">$</span>
-              <span className={isFinalLine(line) ? "text-[#ef4444]" : "text-green-400"}>
+              <span className={isFinalLine(line) ? "text-[#B22222]" : "text-green-400"}>
                 {line}
               </span>
             </div>
