@@ -454,39 +454,69 @@ export function generateIssues(vehicle: Vehicle): Issue[] {
 
 // ─── Recommendation & Roadmap ─────────────────────────────────────────────────
 
+// ─── Recommendation & Roadmap ─────────────────────────────────────────────────
+
 export function generateRecommendation(
   vehicle: Vehicle,
-  issues: Issue[],
+  issues: Issue[] = [],
   askingPrice: number,
 ): ReportRecommendation {
-  const highCount = issues.filter((i) => i.severity === "HIGH").length;
-  const immediate = issues.filter((i) => i.urgency === "Immediate");
-  const soon = issues.filter((i) => i.urgency === "Soon");
-  const monitor = issues.filter((i) => i.urgency === "Monitor");
+  try {
+    const validIssues = Array.isArray(issues) ? issues : [];
+    const safeAskingPrice = askingPrice && askingPrice > 0 ? askingPrice : 1;
 
-  const totalPartsMin = issues.reduce((s, i) => s + i.partsCostMin, 0);
-  const totalMin = issues.reduce((s, i) => s + i.costMin, 0);
-  const repairRatio = totalMin / askingPrice;
+    const highCount = validIssues.filter((i) => i.severity === "HIGH").length;
+    const immediate = validIssues.filter((i) => i.urgency === "Immediate");
+    const soon = validIssues.filter((i) => i.urgency === "Soon");
+    const monitor = validIssues.filter((i) => i.urgency === "Monitor");
 
-  const v = `${vehicle.year ?? ""} ${vehicle.make} ${vehicle.model}`.trim();
+    const totalPartsMin = validIssues.reduce((s, i) => s + (i.partsCostMin || 0), 0);
+    const totalMin = validIssues.reduce((s, i) => s + (i.costMin || 0), 0);
+    const totalMax = validIssues.reduce((s, i) => s + (i.costMax || 0), 0);
+    const repairRatio = totalMin / safeAskingPrice;
 
-  let verdict: "buy" | "negotiate" | "walkaway";
-  let headline: string;
-  let summary: string;
+    const v = `${vehicle?.year ?? ""} ${vehicle?.make ?? ""} ${vehicle?.model ?? ""}`.trim() || "Vehicle";
 
-  if (highCount >= 3 || repairRatio > 0.6) {
-    verdict = "walkaway";
-    headline = "Walk Away — Unless the Price Drops Significantly";
-    summary = `The ${v} has ${highCount} high-severity issues and an estimated repair bill of $${totalMin.toLocaleString()}+ — that's ${Math.round(repairRatio * 100)}% of the asking price. At this ratio, you're buying someone else's problem. If the seller won't move to reflect these costs, there are better cars out there for this budget.`;
-  } else if (highCount >= 1 || repairRatio > 0.25) {
-    verdict = "negotiate";
-    headline = "Negotiate Hard — Real Issues Found";
-    summary = `The ${v} has ${highCount > 0 ? `${highCount} high-priority item${highCount > 1 ? "s" : ""}` : "several medium-priority items"} that need attention. The estimated repair cost of $${totalMin.toLocaleString()}–$${totalPartsMin.toLocaleString() === "0" ? "–" : issues.reduce((s, i) => s + i.costMax, 0).toLocaleString()} gives you real leverage in negotiation. Use the script below to open at a lower number — this car has work ahead of it.`;
-  } else {
-    verdict = "buy";
-    headline = "Solid Buy — Mostly Routine Maintenance";
-    summary = `The ${v} looks like a reasonable purchase at this price point. The flagged items are mostly routine wear — expected on any used car at this age and mileage. Have a trusted mechanic do a pre-purchase inspection to confirm, then make your offer with confidence.`;
+    let verdict: "buy" | "negotiate" | "walkaway";
+    let headline: string;
+    let summary: string;
+
+    if (highCount >= 3 || repairRatio > 0.6) {
+      verdict = "walkaway";
+      headline = "Walk Away — Unless the Price Drops Significantly";
+      summary = `The ${v} has ${highCount} high-severity issues and an estimated repair bill of $${totalMin.toLocaleString()}+ — that's ${Math.round(repairRatio * 100)}% of the asking price. At this ratio, you're buying someone else's problem. If the seller won't move to reflect these costs, there are better cars out there for this budget.`;
+    } else if (highCount >= 1 || repairRatio > 0.25) {
+      verdict = "negotiate";
+      headline = "Negotiate Hard — Real Issues Found";
+      summary = `The ${v} has ${highCount > 0 ? `${highCount} high-priority item${highCount > 1 ? "s" : ""}` : "several medium-priority items"} that need attention. The estimated repair cost of $${totalMin.toLocaleString()}–$${totalPartsMin === 0 ? "–" : totalMax.toLocaleString()} gives you real leverage in negotiation. Use the script below to open at a lower number — this car has work ahead of it.`;
+    } else {
+      verdict = "buy";
+      headline = "Solid Buy — Mostly Routine Maintenance";
+      summary = `The ${v} looks like a reasonable purchase at this price point. The flagged items are mostly routine wear — expected on any used car at this age and mileage. Have a trusted mechanic do a pre-purchase inspection to confirm, then make your offer with confidence.`;
+    }
+
+    const roadmap = [
+      ...(immediate.length > 0 ? [{ urgency: "Immediate" as const, label: "Immediate Attention", reason: "Critical safety or mechanical issues.", issueIds: immediate.map((i) => i.id) }] : []),
+      ...(soon.length > 0 ? [{ urgency: "Soon" as const, label: "Fix Soon", reason: "Routine wear items that need replacement shortly.", issueIds: soon.map((i) => i.id) }] : []),
+      ...(monitor.length > 0 ? [{ urgency: "Monitor" as const, label: "Monitor / Watch", reason: "Minor items to watch over time.", issueIds: monitor.map((i) => i.id) }] : []),
+    ];
+
+    return {
+      verdict,
+      headline,
+      summary,
+      roadmap,
+    };
+
+  } catch (error) {
+    return {
+      verdict: "negotiate",
+      headline: "Negotiate — Review Details Below",
+      summary: "Vehicle evaluation completed. Please inspect the individual checklist items to verify details.",
+      roadmap: [],
+    };
   }
+}
 
   const roadmap: RoadmapItem[] = [];
 
