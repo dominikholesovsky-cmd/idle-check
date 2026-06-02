@@ -2,21 +2,19 @@ import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InspectionChecklist } from "./InspectionChecklist";
-// Importujeme celý modul, abychom bezpečně získali komponentu bez ohledu na přesný název exportu
 import * as RepairTrackerModule from "./RepairCostTracker";
 import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
-// Bezpečné vytažení komponenty - zkusí najít pojmenovaný export, nebo default, nebo vezme první exportovanou funkci
 const RepairCostTracker = 
   RepairTrackerModule.RepairCostTracker || 
   RepairTrackerModule.default || 
   Object.values(RepairTrackerModule).find((val) => typeof val === "function");
 
 export function ReportView({
-  vehicle, marketplace, askingPrice, issues, recalls, recommendation, onNewReport,
+  vehicle, marketplace, askingPrice, issues = [], recalls = [], recommendation, onNewReport,
 }: {
   vehicle: Vehicle; marketplace: string; askingPrice: number;
   issues: Issue[]; recalls: Recall[];
@@ -30,18 +28,33 @@ export function ReportView({
     return next;
   });
 
-  const checkedIssues = useMemo(() => issues.filter((i) => checked.has(i.id)), [issues, checked]);
+  // Bezpečné filtrování s fallbackem na prázdné pole
+  const checkedIssues = useMemo(() => {
+    return Array.isArray(issues) ? issues.filter((i) => checked.has(i.id)) : [];
+  }, [issues, checked]);
 
-  const partsTotal = checkedIssues.reduce((s, i) => s + Math.round((i.partsCostMin + i.partsCostMax) / 2), 0);
-  const labourTotal = checkedIssues.reduce((s, i) => s + Math.round(i.labourHours * 120), 0);
+  const partsTotal = checkedIssues.reduce((s, i) => s + Math.round(((i.partsCostMin || 0) + (i.partsCostMax || 0)) / 2), 0);
+  const labourTotal = checkedIssues.reduce((s, i) => s + Math.round((i.labourHours || 0) * 120), 0);
   const grandTotal = partsTotal + labourTotal;
-  const suggestedOffer = Math.max(0, Math.round(askingPrice - grandTotal * 0.65));
+  const suggestedOffer = Math.max(0, Math.round((askingPrice || 0) - grandTotal * 0.65));
 
-  const recommendedIds = useMemo(() => new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id)), [issues]);
+  const recommendedIds = useMemo(() => {
+    return Array.isArray(issues) ? new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id)) : new Set<string>();
+  }, [issues]);
+
+  // Bezpečné ošetření chybějícího objektu vehicle
+  if (!vehicle) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Loading vehicle data...
+      </div>
+    );
+  }
 
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
   const trimStr = vehicle.trim ? ` (${vehicle.trim})` : "";
   const mileageStr = vehicle.mileage != null ? ` · ${vehicle.mileage.toLocaleString()} mi` : "";
+  const displayPrice = askingPrice || 0;
 
   return (
     <section className="view-fade-in relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -54,7 +67,7 @@ export function ReportView({
             <div className="mt-1 text-base font-bold sm:text-lg">
               {yearStr}{vehicle.make} {vehicle.model}{trimStr}
               {vehicle.engineType && <span className="ml-2 font-condensed text-[13px] font-normal text-muted-foreground">{vehicle.engineType}</span>}
-              <span className="font-normal text-muted-foreground">{mileageStr} · Asked on {marketplace}</span>
+              <span className="font-normal text-muted-foreground">{mileageStr} · Asked on {marketplace || "Unknown"}</span>
             </div>
             {vehicle.vin && (
               <div className="mt-1 font-mono text-[11px] text-muted-foreground">VIN: {vehicle.vin}</div>
@@ -63,7 +76,7 @@ export function ReportView({
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="font-condensed text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Asking Price</div>
-              <div className="font-mono text-xl font-bold tabular-nums">${askingPrice.toLocaleString()}</div>
+              <div className="font-mono text-xl font-bold tabular-nums">${displayPrice.toLocaleString()}</div>
             </div>
             <Button onClick={onNewReport} variant="outline" size="sm"
               className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary">
@@ -93,9 +106,9 @@ export function ReportView({
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {RepairCostTracker && <RepairCostTracker issues={issues} checked={checked} askingPrice={askingPrice} />}
+          {RepairCostTracker && <RepairCostTracker issues={issues} checked={checked} askingPrice={displayPrice} />}
           <NegotiationScript
-            vehicle={vehicle} askingPrice={askingPrice}
+            vehicle={vehicle} askingPrice={displayPrice}
             checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
           />
         </div>
