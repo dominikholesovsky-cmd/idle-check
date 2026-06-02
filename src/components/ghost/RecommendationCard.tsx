@@ -40,10 +40,9 @@ export function RecommendationCard({
   recommendation,
   issues = [],
 }: {
-  recommendation?: ReportRecommendation; // Přidán otazník pro maximální bezpečnost typu
+  recommendation?: ReportRecommendation; 
   issues?: Issue[];
 }) {
-  // 1. ABSOLUTNÍ OCHRANA: Pokud cokoliv chybí, komponenta bezpečně vykreslí fallback a k .verdict vůbec nepřistoupí
   if (!recommendation || !recommendation.verdict) {
     return (
       <div className="mt-10 space-y-4">
@@ -57,7 +56,6 @@ export function RecommendationCard({
     );
   }
 
-  // 2. BEZPEČNÉ VOLÁNÍ: Inicializace konfigurace probíhá až ZA ověřením existence dat
   const currentVerdict = recommendation.verdict || "negotiate";
   const vc = VERDICT_CONFIG[currentVerdict] || VERDICT_CONFIG.negotiate;
   const VIcon = vc.icon;
