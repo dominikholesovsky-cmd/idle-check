@@ -10,44 +10,47 @@ export function NegotiationScript({
   askingPrice,
   checkedIssues,
   repairTotal,
+  suggestedOffer,
 }: {
   vehicle: Vehicle;
   askingPrice: number;
   checkedIssues: Issue[];
   repairTotal: number;
+  suggestedOffer: number;
 }) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  const rawOffer = askingPrice - repairTotal;
-  const offer = Math.max(0, rawOffer);
-  const walkAway = rawOffer < 0;
-
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
-  const issuesList =
+  const modelStr = `${yearStr}${vehicle.make} ${vehicle.model}`.trim();
+
+  const issueNames = checkedIssues.map((i) => i.label.toLowerCase());
+  const issuesSentence =
+    checkedIssues.length === 0
+      ? ""
+      : checkedIssues.length === 1
+      ? issueNames[0]
+      : checkedIssues.length === 2
+      ? `${issueNames[0]} and ${issueNames[1]}`
+      : `${issueNames.slice(0, -1).join(", ")}, and ${issueNames[issueNames.length - 1]}`;
+
+  const opener = `Hey! I came across your ${modelStr} listing and I've actually been looking at a few of these.`;
+
+  const middle =
     checkedIssues.length > 0
-      ? checkedIssues.map((i) => i.label).join(", ")
-      : "several common wear items for this model and year";
+      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${repairTotal.toLocaleString()} at a shop.`
+      : `I did some research before reaching out and the listing looks solid on paper.`;
 
-  const script = `Hi — I'm seriously interested in the ${yearStr}${vehicle.make} ${vehicle.model}.
+  const close =
+    checkedIssues.length > 0
+      ? `I'd be comfortable at $${suggestedOffer.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
+      : `I'd be comfortable at $${askingPrice.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`;
 
-After carefully reviewing the listing, I noted potential concerns I'd want addressed: ${issuesList}.
-
-Based on current US parts pricing and local labor rates ($120/hr), my estimated repair and reconditioning budget comes to $${repairTotal.toLocaleString()}.
-
-Given the listed price of $${askingPrice.toLocaleString()} and the required repairs, I can offer $${offer.toLocaleString()} cash today, ready to pick up this week.${
-    walkAway
-      ? "\n\nNote: estimated repairs exceed the asking price — I'd recommend re-evaluating the listing or being open to a significantly lower number."
-      : ""
-  }
-
-Happy to discuss. Thanks for your time.`;
+  const script = `${opener}\n\n${middle}\n\n${close}`;
 
   const handleCopy = async () => {
     try {
@@ -62,20 +65,22 @@ Happy to discuss. Thanks for your time.`;
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide">Negotiation Script</h3>
+          <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em]">
+            Negotiation Script
+          </h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Auto-generated. Updates live as you check inspection items.
           </p>
         </div>
         <div className="text-right">
-          <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <div className="font-condensed text-[11px] uppercase tracking-wider text-muted-foreground">
             Your Cash Offer
           </div>
           <div className="font-mono text-2xl font-bold tabular-nums text-primary">
-            ${offer.toLocaleString()}
+            ${suggestedOffer.toLocaleString()}
           </div>
         </div>
       </div>
@@ -83,12 +88,12 @@ Happy to discuss. Thanks for your time.`;
       <Textarea
         readOnly
         value={script}
-        className="mt-4 min-h-56 resize-none font-mono text-xs leading-relaxed"
+        className="mt-4 min-h-56 resize-none text-[14px] leading-relaxed"
       />
 
       <Button
         onClick={handleCopy}
-        className={`mt-4 h-11 w-full text-sm font-semibold uppercase tracking-wide transition-colors ${
+        className={`cta-active mt-4 h-12 w-full text-sm font-semibold tracking-wide transition-colors ${
           copied
             ? "bg-green-600 text-white hover:bg-green-600"
             : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -97,7 +102,7 @@ Happy to discuss. Thanks for your time.`;
         {copied ? (
           <>
             <Check className="mr-2 h-4 w-4" />
-            Copied to Clipboard!
+            Copied — good luck out there.
           </>
         ) : (
           <>

@@ -3,38 +3,45 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/ghost/Navbar";
 import { Footer } from "@/components/ghost/Footer";
 import { LandingView, type LandingSubmit } from "@/components/ghost/LandingView";
-import { ScanningPaywallView } from "@/components/ghost/ScanningPaywallView";
+import { ScanningView } from "@/components/ghost/ScanningView";
+import { FreePreviewView } from "@/components/ghost/FreePreviewView";
 import { ReportView } from "@/components/ghost/ReportView";
-import { detectMarketplace, generateIssues, parseVehicle } from "@/lib/ghost/procedural";
-import type { Issue, Vehicle } from "@/lib/ghost/types";
+import {
+  detectMarketplace,
+  generateIssues,
+  generateRecalls,
+  parseVehicle,
+} from "@/lib/ghost/procedural";
+import type { Issue, Recall, Vehicle } from "@/lib/ghost/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Ghost Inspector — AI Used Car Listing Analyzer" },
+      { title: "Idle Check — Inspect any used car listing before you go see it" },
       {
         name: "description",
         content:
-          "Scrape any US vehicle listing with AI. Get an instant inspection checklist, repair cost layout, and negotiation script.",
+          "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds.",
       },
-      { property: "og:title", content: "Ghost Inspector — AI Used Car Listing Analyzer" },
+      { property: "og:title", content: "Idle Check — Used car listing inspector" },
       {
         property: "og:description",
         content:
-          "Scrape any US vehicle listing with AI. Get an instant inspection checklist, repair cost layout, and negotiation script.",
+          "Paste any listing. Get the inspection checklist, repair costs, and negotiation script — before you drive out to see it.",
       },
     ],
   }),
   component: Index,
 });
 
-type Phase = "landing" | "scanning" | "report";
+type Phase = "landing" | "scanning" | "preview" | "report";
 
 interface AnalysisState {
   vehicle: Vehicle;
   marketplace: string;
   askingPrice: number;
   issues: Issue[];
+  recalls: Recall[];
 }
 
 function Index() {
@@ -43,16 +50,21 @@ function Index() {
 
   const handleAnalyze = (data: LandingSubmit) => {
     const vehicle = parseVehicle({
-      url: data.url,
       text: data.manualText,
       make: data.make,
       model: data.model,
       year: data.year,
     });
-    const marketplace = detectMarketplace(data.url);
+    const marketplace = detectMarketplace(data.manualText);
     const issues = generateIssues(vehicle);
-    setAnalysis({ vehicle, marketplace, askingPrice: data.askingPrice, issues });
+    const recalls = generateRecalls(vehicle);
+    setAnalysis({ vehicle, marketplace, askingPrice: data.askingPrice, issues, recalls });
     setPhase("scanning");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleScanDone = () => {
+    setPhase("preview");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -62,17 +74,25 @@ function Index() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
       <Navbar />
-      <main className="flex-1">
+      <main className="relative z-10 flex-1">
         {phase === "landing" && <LandingView onSubmit={handleAnalyze} />}
-        {phase === "scanning" && <ScanningPaywallView onUnlock={handleUnlock} />}
+        {phase === "scanning" && <ScanningView onDone={handleScanDone} />}
+        {phase === "preview" && analysis && (
+          <FreePreviewView
+            vehicle={analysis.vehicle}
+            issues={analysis.issues}
+            onUnlock={handleUnlock}
+          />
+        )}
         {phase === "report" && analysis && (
           <ReportView
             vehicle={analysis.vehicle}
             marketplace={analysis.marketplace}
             askingPrice={analysis.askingPrice}
             issues={analysis.issues}
+            recalls={analysis.recalls}
           />
         )}
       </main>
