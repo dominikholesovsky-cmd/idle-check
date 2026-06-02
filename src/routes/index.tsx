@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/ghost/Navbar";
 import { Footer } from "@/components/ghost/Footer";
@@ -36,17 +36,45 @@ export const Route = createFileRoute("/")({
 
 type Phase = "landing" | "scanning" | "preview" | "report";
 
-interface AnalysisState {
+export interface AnalysisState {
   vehicle: Vehicle;
   marketplace: string;
   askingPrice: number;
   issues: Issue[];
   recalls: Recall[];
+  timestamp: number;
+}
+
+const STORAGE_KEY = "idle-check-history";
+const MAX_HISTORY = 10;
+
+function loadHistory(): AnalysisState[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory(entry: AnalysisState) {
+  try {
+    const prev = loadHistory();
+    const next = [entry, ...prev].slice(0, MAX_HISTORY);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // localStorage unavailable — silently skip
+  }
 }
 
 function Index() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
+  const [history, setHistory] = useState<AnalysisState[]>([]);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const handleAnalyze = (data: LandingSubmit) => {
     const vehicle = parseVehicle({
@@ -58,7 +86,17 @@ function Index() {
     const marketplace = detectMarketplace(data.manualText);
     const issues = generateIssues(vehicle);
     const recalls = generateRecalls(vehicle);
-    setAnalysis({ vehicle, marketplace, askingPrice: data.askingPrice, issues, recalls });
+    const entry: AnalysisState = {
+      vehicle,
+      marketplace,
+      askingPrice: data.askingPrice,
+      issues,
+      recalls,
+      timestamp: Date.now(),
+    };
+    setAnalysis(entry);
+    saveToHistory(entry);
+    setHistory(loadHistory());
     setPhase("scanning");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -73,11 +111,33 @@ function Index() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleNewReport = () => {
+    setPhase("landing");
+    setAnalysis(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleLoadHistory = (entry: AnalysisState) => {
+    setAnalysis(entry);
+    setPhase("report");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar />
+      <Navbar
+        onLogoClick={phase !== "landing" ? handleNewReport : undefined}
+        showNewReport={phase === "report"}
+        onNewReport={handleNewReport}
+      />
       <main className="relative z-10 flex-1">
-        {phase === "landing" && <LandingView onSubmit={handleAnalyze} />}
+        {phase === "landing" && (
+          <LandingView
+            onSubmit={handleAnalyze}
+            history={history}
+            onLoadHistory={handleLoadHistory}
+          />
+        )}
         {phase === "scanning" && <ScanningView onDone={handleScanDone} />}
         {phase === "preview" && analysis && (
           <FreePreviewView
@@ -93,6 +153,7 @@ function Index() {
             askingPrice={analysis.askingPrice}
             issues={analysis.issues}
             recalls={analysis.recalls}
+            onNewReport={handleNewReport}
           />
         )}
       </main>
