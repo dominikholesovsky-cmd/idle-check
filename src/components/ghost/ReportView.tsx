@@ -6,6 +6,7 @@ import * as RepairTrackerModule from "./RepairCostTracker";
 import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
+import { generateRecommendation } from "@/lib/ghost/procedural"; // NAIMPORTUJE VÝPOČETNÍ FUNKCI
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
 const RepairCostTracker = 
@@ -18,7 +19,8 @@ export function ReportView({
 }: {
   vehicle: Vehicle; marketplace: string; askingPrice: number;
   issues: Issue[]; recalls: Recall[];
-  recommendation: ReportRecommendation; onNewReport: () => void;
+  recommendation?: ReportRecommendation; // PŘIDÁN OTAZNÍK PRO VYŠŠÍ BEZPEČNOST TYPU
+  onNewReport: () => void;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
@@ -41,6 +43,14 @@ export function ReportView({
   const recommendedIds = useMemo(() => {
     return Array.isArray(issues) ? new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id)) : new Set<string>();
   }, [issues]);
+
+  // ŽIVÁ POJISTKA: Pokud z historie nebo API nedorazilo recommendation, za běhu ho dopočítáme
+  const safeRecommendation = useMemo(() => {
+    if (recommendation && recommendation.verdict) {
+      return recommendation;
+    }
+    return generateRecommendation(vehicle, issues, askingPrice);
+  }, [recommendation, vehicle, issues, askingPrice]);
 
   // Bezpečné ošetření chybějícího objektu vehicle
   if (!vehicle) {
@@ -87,8 +97,8 @@ export function ReportView({
         </div>
       </div>
 
-      {/* Recommendation */}
-      <RecommendationCard recommendation={recommendation} issues={issues} />
+      {/* Recommendation — NYNÍ POUŽÍVÁ BEZPEČNOU STRUKTURU */}
+      <RecommendationCard recommendation={safeRecommendation} issues={issues} />
 
       {/* Main grid */}
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
