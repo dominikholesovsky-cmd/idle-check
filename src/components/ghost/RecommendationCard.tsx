@@ -43,7 +43,21 @@ export function RecommendationCard({
   recommendation: ReportRecommendation;
   issues: Issue[];
 }) {
-  const vc = VERDICT_CONFIG[recommendation.verdict];
+  // Ochrana před spadnutím, pokud objekt recommendation nebo vlastnost verdict chybí
+  if (!recommendation || !recommendation.verdict) {
+    return (
+      <div className="mt-10 space-y-4">
+        <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Overall Recommendation
+        </h2>
+        <div className="rounded-xl border border-border bg-card p-5 text-center text-sm text-muted-foreground">
+          No recommendation data available.
+        </div>
+      </div>
+    );
+  }
+
+  const vc = VERDICT_CONFIG[recommendation.verdict] || VERDICT_CONFIG.negotiate;
   const VIcon = vc.icon;
 
   return (
@@ -61,26 +75,28 @@ export function RecommendationCard({
               {vc.label}
             </div>
             <h3 className="mt-1 text-lg font-extrabold tracking-tight text-foreground">
-              {recommendation.headline}
+              {recommendation.headline || "No Headline Provided"}
             </h3>
             <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-              {recommendation.summary}
+              {recommendation.summary || "No details available."}
             </p>
           </div>
         </div>
       </div>
 
       {/* Maintenance roadmap */}
-      {recommendation.roadmap.length > 0 && (
+      {Array.isArray(recommendation.roadmap) && recommendation.roadmap.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-6">
           <h3 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Maintenance Roadmap
           </h3>
           <div className="mt-4 space-y-5">
             {recommendation.roadmap.map((group) => {
-              const cfg = URGENCY_CONFIG[group.urgency];
+              const cfg = URGENCY_CONFIG[group.urgency] || URGENCY_CONFIG.Monitor;
               const Icon = cfg.icon;
-              const groupIssues = issues.filter((i) => group.issueIds.includes(i.id));
+              const groupIssues = Array.isArray(issues) 
+                ? issues.filter((i) => group.issueIds?.includes(i.id))
+                : [];
 
               return (
                 <div key={group.urgency}>
@@ -91,16 +107,19 @@ export function RecommendationCard({
                     </span>
                   </div>
                   <p className="mt-1 text-[12px] text-muted-foreground">{group.reason}</p>
-                  <ul className={`mt-3 divide-y divide-border rounded-lg border ${cfg.border} ${cfg.bg} overflow-hidden`}>
-                    {groupIssues.map((issue) => (
-                      <li key={issue.id} className="flex items-center justify-between px-4 py-2.5">
-                        <span className="text-[13px] font-medium text-foreground">{issue.label}</span>
-                        <span className="font-mono text-[12px] text-muted-foreground">
-                          ${issue.costMin.toLocaleString()} – ${issue.costMax.toLocaleString()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  
+                  {groupIssues.length > 0 && (
+                    <ul className={`mt-3 divide-y divide-border rounded-lg border ${cfg.border} ${cfg.bg} overflow-hidden`}>
+                      {groupIssues.map((issue) => (
+                        <li key={issue.id} className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-[13px] font-medium text-foreground">{issue.label}</span>
+                          <span className="font-mono text-[12px] text-muted-foreground">
+                            ${issue.costMin?.toLocaleString() || 0} – ${issue.costMax?.toLocaleString() || 0}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}
