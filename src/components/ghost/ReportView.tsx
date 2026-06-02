@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InspectionChecklist } from "./InspectionChecklist";
-import { RepairCostTracker } from "./RepairCostTracker";
+import RepairCostTracker from "./RepairCostTracker";
 import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
