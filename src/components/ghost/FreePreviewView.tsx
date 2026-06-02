@@ -30,7 +30,6 @@ export function FreePreviewView({
   const free = issues.slice(0, 3);
   const lockedCount = Math.max(0, issues.length - free.length);
   const peek = issues.slice(3, 7);
-
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
 
   return (
@@ -68,41 +67,49 @@ export function FreePreviewView({
         ))}
       </ul>
 
-      {/* Blurred stack */}
-      <div className="relative mt-6">
-        <div className="space-y-2 opacity-50" style={{ filter: "blur(16px)" }}>
+      {/* Locked items — subtle, readable enough to tease */}
+      <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-card">
+        <ul className="divide-y divide-border">
           {peek.map((p) => (
-            <div
+            <li
               key={p.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
+              className="flex items-center justify-between px-4 py-3 opacity-40 select-none"
+              style={{ filter: "blur(3px)" }}
             >
-              <span className="text-sm">{p.label}</span>
-              <span className="font-mono text-sm">$$$ – $$$</span>
-            </div>
+              <div className="flex items-center gap-3">
+                <SeverityPill severity={p.severity} />
+                <span className="text-[14px] font-medium">{p.label}</span>
+              </div>
+              <span className="font-mono text-[13px] font-semibold text-muted-foreground">
+                $— – $—
+              </span>
+            </li>
           ))}
-        </div>
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="rounded-full border border-border bg-background/90 px-3 py-1.5 font-condensed text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {lockedCount} more findings in full report
+        </ul>
+        {/* Gradient fade at bottom */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
+        {/* Centered label */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="rounded-full border border-border bg-background/95 px-4 py-2 font-condensed text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm">
+            {lockedCount} more findings locked
           </span>
         </div>
       </div>
 
       {/* Unlock card */}
-      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-8">
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-8">
         <div className="text-center">
           <h3 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
             Unlock the full report
           </h3>
           <p className="mx-auto mt-3 max-w-md text-[15px] text-muted-foreground">
-            Every finding with repair cost ranges, severity levels, and a negotiation message written
-            for this exact car and this exact asking price.
+            Every finding with repair cost ranges, severity levels, and a negotiation message
+            written for this exact car and this exact asking price.
           </p>
           <div className="mt-6 font-sans text-5xl font-extrabold tracking-tight text-foreground">
             $9.99
           </div>
         </div>
-
         <Button
           onClick={onUnlock}
           className="cta-active mt-6 h-14 w-full bg-primary text-base font-semibold text-primary-foreground shadow-[0_2px_12px_rgba(178,34,34,0.18)] hover:bg-primary/90"
@@ -110,7 +117,6 @@ export function FreePreviewView({
           <CreditCard className="mr-2 h-4 w-4" />
           Unlock Full Report — $9.99
         </Button>
-
         <p className="mt-3 text-center text-[12px] text-muted-foreground">
           One-time payment. No subscription. Works for this listing only.
         </p>
