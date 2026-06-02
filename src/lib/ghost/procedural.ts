@@ -454,8 +454,6 @@ export function generateIssues(vehicle: Vehicle): Issue[] {
 
 // ─── Recommendation & Roadmap ─────────────────────────────────────────────────
 
-// ─── Recommendation & Roadmap ─────────────────────────────────────────────────
-
 export function generateRecommendation(
   vehicle: Vehicle,
   issues: Issue[] = [],
