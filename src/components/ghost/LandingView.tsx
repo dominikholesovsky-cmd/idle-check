@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Clock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { AnalysisState } from "@/routes/index";
 
 export interface LandingSubmit {
   manualText: string;
@@ -11,7 +13,24 @@ export interface LandingSubmit {
   askingPrice: number;
 }
 
-export function LandingView({ onSubmit }: { onSubmit: (data: LandingSubmit) => void }) {
+interface LandingViewProps {
+  onSubmit: (data: LandingSubmit) => void;
+  history: AnalysisState[];
+  onLoadHistory: (entry: AnalysisState) => void;
+}
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewProps) {
   const [manualText, setManualText] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -55,6 +74,40 @@ export function LandingView({ onSubmit }: { onSubmit: (data: LandingSubmit) => v
         </p>
         <div className="mt-5 h-[2px] w-[60px] bg-primary" />
       </div>
+
+      {/* Recent Reports History */}
+      {history.length > 0 && (
+        <div className="mt-10">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Recent Reports
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {history.slice(0, 5).map((entry, i) => (
+              <li key={i}>
+                <button
+                  type="button"
+                  onClick={() => onLoadHistory(entry)}
+                  className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-card"
+                >
+                  <div className="min-w-0">
+                    <span className="block text-[14px] font-medium text-foreground">
+                      {entry.vehicle.year} {entry.vehicle.make} {entry.vehicle.model}
+                      {entry.vehicle.trim ? ` (${entry.vehicle.trim})` : ""}
+                    </span>
+                    <span className="block text-[12px] text-muted-foreground">
+                      ${entry.askingPrice.toLocaleString()} · {entry.marketplace} · {timeAgo(entry.timestamp)}
+                    </span>
+                  </div>
+                  <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Main Input */}
       <div className="mt-12 space-y-6">
@@ -102,7 +155,6 @@ export function LandingView({ onSubmit }: { onSubmit: (data: LandingSubmit) => v
           </div>
         </div>
 
-        {/* Asking Price (Mandatory) */}
         <div>
           <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
             Listing Price / Asking Price ($ USD) <span className="text-primary">*</span>
@@ -138,10 +190,9 @@ export function LandingView({ onSubmit }: { onSubmit: (data: LandingSubmit) => v
         <p className="text-center text-[13px] text-muted-foreground">
           Your first 3 red flags are always free — no account required.
         </p>
-
         <p className="pt-2 text-center text-[13px] text-muted-foreground">
-          Works with listings from Facebook Marketplace, Craigslist, OfferUp, eBay Motors, AutoTrader,
-          or anywhere else. Just paste what the seller wrote.
+          Works with listings from Facebook Marketplace, Craigslist, OfferUp, eBay Motors,
+          AutoTrader, or anywhere else. Just paste what the seller wrote.
         </p>
       </div>
     </section>
