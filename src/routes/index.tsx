@@ -72,10 +72,40 @@ function loadHistory(): AnalysisState[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    // Projedeme historii a opravíme poškozené nebo staré záznamy
-    return parsed
-      .map(validateAndMigrateEntry)
-      .filter((entry): entry is AnalysisState => entry !== null);
+    let hasChanges = false;
+
+    // Projedeme historii, opravíme poškozené nebo staré záznamy a zaznamenáme změny
+    const migrated = parsed.map((item) => {
+      if (!item || !item.vehicle) return null;
+
+      if (!item.recommendation || !item.recommendation.verdict) {
+        hasChanges = true;
+        try {
+          const issues = item.issues || [];
+          const askingPrice = item.askingPrice || 0;
+          item.recommendation = generateRecommendation(item.vehicle, issues, askingPrice);
+        } catch {
+          item.recommendation = {
+            verdict: "negotiate",
+            headline: "Review Needed",
+            summary: "Please regenerate this report to view current recommendations.",
+            roadmap: []
+          };
+        }
+      }
+
+      if (!Array.isArray(item.issues)) { item.issues = []; hasChanges = true; }
+      if (!Array.isArray(item.recalls)) { item.recalls = []; hasChanges = true; }
+
+      return item;
+    }).filter((entry): entry is AnalysisState => entry !== null);
+
+    // Pokud došlo k opravě starých dat, ihned je přepíšeme v localStorage na disku
+    if (hasChanges) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    }
+
+    return migrated;
   } catch { 
     return []; 
   }
