@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -5,13 +7,78 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Category, Issue } from "@/lib/ghost/types";
+import type { Category, Issue, Severity } from "@/lib/ghost/types";
 
 const CATEGORIES: Category[] = [
   "Engine & Drivetrain",
   "Chassis & Suspension",
   "Body & Electrical",
 ];
+
+function SeverityPill({ severity }: { severity: Severity }) {
+  const cls =
+    severity === "HIGH"
+      ? "bg-primary text-primary-foreground"
+      : severity === "MED"
+      ? "bg-amber-500 text-white"
+      : "bg-zinc-200 text-zinc-700";
+  return (
+    <span
+      className={`inline-flex h-5 min-w-[42px] items-center justify-center rounded-sm px-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider ${cls}`}
+    >
+      {severity}
+    </span>
+  );
+}
+
+function Row({
+  issue,
+  isChecked,
+  onToggle,
+}: {
+  issue: Issue;
+  isChecked: boolean;
+  onToggle: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className="py-3">
+      <div className="flex items-center gap-3">
+        <SeverityPill severity={issue.severity} />
+        <Checkbox
+          id={issue.id}
+          checked={isChecked}
+          onCheckedChange={onToggle}
+          className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex flex-1 items-center justify-between gap-3 text-left"
+        >
+          <span className={`text-[14px] ${isChecked ? "text-foreground" : "text-foreground/85"}`}>
+            {issue.label}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-[13px] font-semibold tabular-nums">
+              ${issue.costMin.toLocaleString()} – ${issue.costMax.toLocaleString()}
+            </span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+                open ? "rotate-180" : ""
+              }`}
+            />
+          </span>
+        </button>
+      </div>
+      {open && (
+        <p className="mt-2 pl-[78px] pr-2 text-[13px] leading-relaxed text-muted-foreground view-fade-in">
+          {issue.explanation}
+        </p>
+      )}
+    </li>
+  );
+}
 
 export function InspectionChecklist({
   issues,
@@ -30,11 +97,13 @@ export function InspectionChecklist({
           <AccordionItem
             key={cat}
             value={cat}
-            className="rounded-lg border border-border bg-card px-4"
+            className="rounded-lg border border-border bg-card px-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
           >
             <AccordionTrigger className="py-4 text-left hover:no-underline">
               <div className="flex w-full items-center justify-between gap-3 pr-2">
-                <span className="text-sm font-semibold uppercase tracking-wide">{cat}</span>
+                <span className="font-condensed text-sm font-semibold uppercase tracking-[0.12em]">
+                  {cat}
+                </span>
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {items.length} CHECKS
                 </span>
@@ -42,30 +111,14 @@ export function InspectionChecklist({
             </AccordionTrigger>
             <AccordionContent>
               <ul className="divide-y divide-border">
-                {items.map((issue) => {
-                  const isChecked = checked.has(issue.id);
-                  return (
-                    <li key={issue.id} className="flex items-center gap-3 py-3">
-                      <Checkbox
-                        id={issue.id}
-                        checked={isChecked}
-                        onCheckedChange={() => onToggle(issue.id)}
-                        className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
-                      />
-                      <label
-                        htmlFor={issue.id}
-                        className={`flex-1 cursor-pointer text-sm ${
-                          isChecked ? "text-foreground" : "text-foreground/80"
-                        }`}
-                      >
-                        {issue.label}
-                      </label>
-                      <span className="font-mono text-sm font-semibold tabular-nums">
-                        ${issue.cost.toLocaleString()}
-                      </span>
-                    </li>
-                  );
-                })}
+                {items.map((issue) => (
+                  <Row
+                    key={issue.id}
+                    issue={issue}
+                    isChecked={checked.has(issue.id)}
+                    onToggle={() => onToggle(issue.id)}
+                  />
+                ))}
               </ul>
             </AccordionContent>
           </AccordionItem>
