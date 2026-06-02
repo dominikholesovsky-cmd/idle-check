@@ -493,11 +493,32 @@ export function generateRecommendation(
       summary = `The ${v} looks like a reasonable purchase at this price point. The flagged items are mostly routine wear — expected on any used car at this age and mileage. Have a trusted mechanic do a pre-purchase inspection to confirm, then make your offer with confidence.`;
     }
 
-    const roadmap = [
-      ...(immediate.length > 0 ? [{ urgency: "Immediate" as const, label: "Immediate Attention", reason: "Critical safety or mechanical issues.", issueIds: immediate.map((i) => i.id) }] : []),
-      ...(soon.length > 0 ? [{ urgency: "Soon" as const, label: "Fix Soon", reason: "Routine wear items that need replacement shortly.", issueIds: soon.map((i) => i.id) }] : []),
-      ...(monitor.length > 0 ? [{ urgency: "Monitor" as const, label: "Monitor / Watch", reason: "Minor items to watch over time.", issueIds: monitor.map((i) => i.id) }] : []),
-    ];
+    const roadmap: any[] = [];
+
+    if (immediate.length > 0) {
+      roadmap.push({
+        urgency: "Immediate",
+        label: "Fix Before Driving",
+        reason: "These items are safety-critical or will cause further damage if ignored. Address them before the car goes on the road.",
+        issueIds: immediate.map((i) => i.id),
+      });
+    }
+    if (soon.length > 0) {
+      roadmap.push({
+        urgency: "Soon",
+        label: "Address Within 3 Months",
+        reason: "These are legitimate wear items that won't strand you today but will become more expensive if ignored. Budget for them in your first ownership quarter.",
+        issueIds: soon.map((i) => i.id),
+      });
+    }
+    if (monitor.length > 0) {
+      roadmap.push({
+        urgency: "Monitor",
+        label: "Keep an Eye On",
+        reason: "Low-priority items — cosmetic or minor maintenance. Check them at your first scheduled service and address as budget allows.",
+        issueIds: monitor.map((i) => i.id),
+      });
+    }
 
     return {
       verdict,
@@ -514,36 +535,6 @@ export function generateRecommendation(
       roadmap: [],
     };
   }
-}
-
-  const roadmap: RoadmapItem[] = [];
-
-  if (immediate.length > 0) {
-    roadmap.push({
-      urgency: "Immediate",
-      label: "Fix Before Driving",
-      reason: "These items are safety-critical or will cause further damage if ignored. Address them before the car goes on the road.",
-      issueIds: immediate.map((i) => i.id),
-    });
-  }
-  if (soon.length > 0) {
-    roadmap.push({
-      urgency: "Soon",
-      label: "Address Within 3 Months",
-      reason: "These are legitimate wear items that won't strand you today but will become more expensive if ignored. Budget for them in your first ownership quarter.",
-      issueIds: soon.map((i) => i.id),
-    });
-  }
-  if (monitor.length > 0) {
-    roadmap.push({
-      urgency: "Monitor",
-      label: "Keep an Eye On",
-      reason: "Low-priority items — cosmetic or minor maintenance. Check them at your first scheduled service and address as budget allows.",
-      issueIds: monitor.map((i) => i.id),
-    });
-  }
-
-  return { verdict, headline, summary, roadmap };
 }
 
 // ─── Recalls ──────────────────────────────────────────────────────────────────
