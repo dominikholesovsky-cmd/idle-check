@@ -107,7 +107,7 @@ export function FreePreviewView({
             written for this exact car and this exact asking price.
           </p>
           <div className="mt-6 font-sans text-5xl font-extrabold tracking-tight text-foreground">
-            $9.99
+            $4.99
           </div>
         </div>
         <Button
