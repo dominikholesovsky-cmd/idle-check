@@ -2,11 +2,18 @@ import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InspectionChecklist } from "./InspectionChecklist";
-import RepairCostTracker from "./RepairCostTracker";
+// Importujeme celý modul, abychom bezpečně získali komponentu bez ohledu na přesný název exportu
+import * as RepairTrackerModule from "./RepairCostTracker";
 import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
+
+// Bezpečné vytažení komponenty - zkusí najít pojmenovaný export, nebo default, nebo vezme první exportovanou funkci
+const RepairCostTracker = 
+  RepairTrackerModule.RepairCostTracker || 
+  RepairTrackerModule.default || 
+  Object.values(RepairTrackerModule).find((val) => typeof val === "function");
 
 export function ReportView({
   vehicle, marketplace, askingPrice, issues, recalls, recommendation, onNewReport,
@@ -86,7 +93,7 @@ export function ReportView({
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <RepairCostTracker issues={issues} checked={checked} askingPrice={askingPrice} />
+          {RepairCostTracker && <RepairCostTracker issues={issues} checked={checked} askingPrice={askingPrice} />}
           <NegotiationScript
             vehicle={vehicle} askingPrice={askingPrice}
             checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
