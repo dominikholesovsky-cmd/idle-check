@@ -34,15 +34,17 @@ function SeverityPill({ severity }: { severity: Severity }) {
 function Row({
   issue,
   isChecked,
+  isRecommended,
   onToggle,
 }: {
   issue: Issue;
   isChecked: boolean;
+  isRecommended: boolean;
   onToggle: () => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <li className="py-3">
+    <li className={`py-3 ${isRecommended && !isChecked ? "bg-primary/[0.03]" : ""}`}>
       <div className="flex items-center gap-3">
         <SeverityPill severity={issue.severity} />
         <Checkbox
@@ -56,10 +58,17 @@ function Row({
           onClick={() => setOpen((v) => !v)}
           className="flex flex-1 items-center justify-between gap-3 text-left"
         >
-          <span className={`text-[14px] ${isChecked ? "text-foreground" : "text-foreground/85"}`}>
-            {issue.label}
-          </span>
           <span className="flex items-center gap-2">
+            <span className={`text-[14px] ${isChecked ? "text-foreground" : "text-foreground/85"}`}>
+              {issue.label}
+            </span>
+            {isRecommended && (
+              <span className="inline-flex items-center rounded-sm bg-primary/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-primary">
+                Recommended
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-2 shrink-0">
             <span className="font-mono text-[13px] font-semibold tabular-nums">
               ${issue.costMin.toLocaleString()} – ${issue.costMax.toLocaleString()}
             </span>
@@ -84,15 +93,18 @@ export function InspectionChecklist({
   issues,
   checked,
   onToggle,
+  recommendedIds,
 }: {
   issues: Issue[];
   checked: Set<string>;
   onToggle: (id: string) => void;
+  recommendedIds: Set<string>;
 }) {
   return (
     <Accordion type="multiple" defaultValue={CATEGORIES} className="space-y-3">
       {CATEGORIES.map((cat) => {
         const items = issues.filter((i) => i.category === cat);
+        const recCount = items.filter((i) => recommendedIds.has(i.id)).length;
         return (
           <AccordionItem
             key={cat}
@@ -101,8 +113,15 @@ export function InspectionChecklist({
           >
             <AccordionTrigger className="py-4 text-left hover:no-underline">
               <div className="flex w-full items-center justify-between gap-3 pr-2">
-                <span className="font-condensed text-sm font-semibold uppercase tracking-[0.12em]">
-                  {cat}
+                <span className="flex items-center gap-2">
+                  <span className="font-condensed text-sm font-semibold uppercase tracking-[0.12em]">
+                    {cat}
+                  </span>
+                  {recCount > 0 && (
+                    <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      {recCount} recommended
+                    </span>
+                  )}
                 </span>
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {items.length} CHECKS
@@ -116,6 +135,7 @@ export function InspectionChecklist({
                     key={issue.id}
                     issue={issue}
                     isChecked={checked.has(issue.id)}
+                    isRecommended={recommendedIds.has(issue.id)}
                     onToggle={() => onToggle(issue.id)}
                   />
                 ))}
