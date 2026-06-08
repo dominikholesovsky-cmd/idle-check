@@ -108,12 +108,49 @@ export function ReportView({
         </div>
       </div>
 
-      {/* Recommendation — NYNÍ POUŽÍVÁ BEZPEČNOU STRUKTURU */}
-      <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+      {/* Sticky section nav with ambient progress */}
+      <nav
+        aria-label="Report sections"
+        className="sticky top-[68px] z-30 mt-4 -mx-1 rounded-xl border border-border bg-card/90 shadow-[0_2px_12px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/70"
+      >
+        <div className="overflow-x-auto px-1 py-1">
+          <ul className="flex min-w-max items-center gap-1 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em]">
+            {[
+              { href: "#verdict", label: "Verdict" },
+              { href: "#checklist", label: `Checklist${issues.length ? ` · ${issues.length}` : ""}` },
+              { href: "#budget", label: "Repair Budget" },
+              { href: "#negotiation", label: "Negotiation" },
+              { href: "#recalls", label: `Recalls${recalls.length ? ` · ${recalls.length}` : ""}` },
+            ].map((item) => (
+              <li key={item.href}>
+                <a
+                  href={item.href}
+                  className="block whitespace-nowrap rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {/* Ambient scroll progress — soft glow strip */}
+        <div className="relative h-px overflow-hidden rounded-b-xl bg-border/40">
+          <div
+            className="h-full origin-left bg-gradient-to-r from-transparent via-primary/70 to-primary shadow-[0_0_12px_rgba(220,38,38,0.55)] transition-[width] duration-150 ease-out"
+            style={{ width: `${scrollProgress * 100}%` }}
+            aria-hidden
+          />
+        </div>
+      </nav>
+
+      {/* Recommendation */}
+      <div id="verdict" className="scroll-mt-32">
+        <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+      </div>
 
       {/* Main grid */}
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div>
+        <div id="checklist" className="scroll-mt-32">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inspection Checklist</h2>
             {recommendedIds.size > 0 && (
@@ -126,16 +163,22 @@ export function ReportView({
           <InspectionChecklist issues={issues} checked={checked} onToggle={toggle} recommendedIds={recommendedIds} />
         </div>
 
-        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <RepairCostTracker issues={issues} checked={checked} askingPrice={displayPrice} />
-          <NegotiationScript
-            vehicle={vehicle} askingPrice={displayPrice}
-            checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
-          />
+        <div className="space-y-6 lg:sticky lg:top-[140px] lg:self-start">
+          <div id="budget" className="scroll-mt-32">
+            <RepairCostTracker issues={issues} checked={checked} askingPrice={displayPrice} />
+          </div>
+          <div id="negotiation" className="scroll-mt-32">
+            <NegotiationScript
+              vehicle={vehicle} askingPrice={displayPrice}
+              checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
+            />
+          </div>
         </div>
       </div>
 
-      <RecallSection recalls={recalls} />
+      <div id="recalls" className="scroll-mt-32">
+        <RecallSection recalls={recalls} />
+      </div>
     </section>
   );
 }
