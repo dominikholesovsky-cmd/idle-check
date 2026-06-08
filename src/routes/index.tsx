@@ -60,7 +60,7 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!Array.isArray(entry.issues)) entry.issues = [];
   if (!Array.isArray(entry.recalls)) entry.recalls = [];
   if (!entry.reportId) entry.reportId = generateReportId();
-  if (entry.unlocked === undefined) entry.unlocked = true; // staré záznamy byly odemčené
+  if (entry.unlocked === undefined) entry.unlocked = true;
   return entry as AnalysisState;
 }
 
@@ -98,17 +98,14 @@ function Index() {
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
-  // Po návratu ze Stripe success URL — odemkni report
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const reportId = params.get("report_id");
 
     if (sessionId && reportId) {
-      // Vyčisti URL params
       window.history.replaceState({}, "", "/");
 
-      // Najdi report v historii a odemkni ho
       const hist = loadHistory();
       const entry = hist.find((e) => e.reportId === reportId);
       if (entry) {
@@ -133,12 +130,10 @@ function Index() {
     const marketplace = detectMarketplace(data.manualText);
     const reportId = generateReportId();
 
-    // Optimisticky přejdi na scanning view okamžitě
     setPhase("scanning");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     try {
-      // Claude API + NHTSA paralelně
       const [aiResult, recallResult] = await Promise.allSettled([
         analyzeVehicle({
           data: {
@@ -161,7 +156,6 @@ function Index() {
         }),
       ]);
 
-      // Issues — AI nebo procedural fallback
       let issues: Issue[] = [];
       let sellerRedFlags: string[] = [];
       let marketValueNote = "";
@@ -171,11 +165,9 @@ function Index() {
         sellerRedFlags = aiResult.value.sellerRedFlags;
         marketValueNote = aiResult.value.marketValueNote;
       } else {
-        console.warn("Claude API failed, using procedural fallback:", aiResult.status === "rejected" ? aiResult.reason : "empty response");
         issues = generateIssues(vehicle);
       }
 
-      // Recalls — NHTSA nebo procedural fallback
       let recalls: Recall[] = [];
       let recallSource: AnalysisState["recallSource"] = "procedural";
 
@@ -205,7 +197,6 @@ function Index() {
 
     } catch (err) {
       console.error("Analysis failed:", err);
-      // Procedural fallback pro celý report
       const issues = generateIssues(vehicle);
       const recalls = generateRecalls(vehicle);
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
@@ -233,21 +224,21 @@ function Index() {
     const vehicleLabel = `${analysis.vehicle.year ?? ""} ${analysis.vehicle.make} ${analysis.vehicle.model}`.trim();
 
     try {
+      // OPRAVA: Parametry posíláme rovnou bez objektu 'data'
       const result = await createCheckoutSession({
-        data: {
-          vehicleLabel,
-          reportId: analysis.reportId,
-          successUrl: window.location.origin,
-          cancelUrl: window.location.origin,
-        },
+        vehicleLabel,
+        reportId: analysis.reportId,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.origin,
       });
 
-      if (result.sessionUrl) {
+      // OPRAVA: Provedení reálného přesměrování uživatele na Stripe
+      if (result?.sessionUrl) {
         window.location.href = result.sessionUrl;
       }
     } catch (err) {
       console.error("Stripe checkout failed:", err);
-      // Dev fallback — odemkni přímo bez platby (pouze pokud není STRIPE_SECRET_KEY)
+      // Dev fallback — pokud Stripe selže (např. chybí klíč), odemkneme bezplatně, aby aplikace nezamrzla
       setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
       updateHistoryEntry(analysis.reportId, { unlocked: true });
       setPhase("report");
