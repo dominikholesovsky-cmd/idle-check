@@ -6,6 +6,9 @@ import { LandingView, type LandingSubmit } from "@/components/ghost/LandingView"
 import { ScanningView } from "@/components/ghost/ScanningView";
 import { FreePreviewView } from "@/components/ghost/FreePreviewView";
 import { ReportView } from "@/components/ghost/ReportView";
+import { analyzeVehicle } from "@/lib/api/analyzeVehicle";
+import { fetchRecalls } from "@/lib/api/fetchRecalls";
+import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -32,35 +35,32 @@ export interface AnalysisState {
   recalls: Recall[];
   recommendation: ReportRecommendation;
   timestamp: number;
+  reportId: string;
+  unlocked: boolean;
+  sellerRedFlags?: string[];
+  marketValueNote?: string;
+  recallSource?: "vin" | "nhtsa" | "procedural" | "none";
 }
 
 const STORAGE_KEY = "idle-check-history";
 
-// Pomocná funkce, která zkontroluje a případně opraví starou strukturu z localStorage
+function generateReportId(): string {
+  return `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!entry || !entry.vehicle) return null;
-
-  // Pokud chybí recommendation nebo v něm chybí klíč verdict, vygenerujeme ho znovu za běhu
   if (!entry.recommendation || !entry.recommendation.verdict) {
     try {
-      const issues = entry.issues || [];
-      const askingPrice = entry.askingPrice || 0;
-      entry.recommendation = generateRecommendation(entry.vehicle, issues, askingPrice);
-    } catch (err) {
-      // Bezpečný fallback struktury, pokud by i generování selhalo
-      entry.recommendation = {
-        verdict: "negotiate",
-        headline: "Review Needed",
-        summary: "Please regenerate this report to view current recommendations.",
-        roadmap: []
-      };
+      entry.recommendation = generateRecommendation(entry.vehicle, entry.issues || [], entry.askingPrice || 0);
+    } catch {
+      entry.recommendation = { verdict: "negotiate", headline: "Review Needed", summary: "Please regenerate this report.", roadmap: [] };
     }
   }
-
-  // Zajistíme, že pole nebudou undefined
   if (!Array.isArray(entry.issues)) entry.issues = [];
   if (!Array.isArray(entry.recalls)) entry.recalls = [];
-
+  if (!entry.reportId) entry.reportId = generateReportId();
+  if (entry.unlocked === undefined) entry.unlocked = true; // staré záznamy byly odemčené
   return entry as AnalysisState;
 }
 
@@ -68,54 +68,23 @@ function loadHistory(): AnalysisState[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-
-    let hasChanges = false;
-
-    // Projedeme historii, opravíme poškozené nebo staré záznamy a zaznamenáme změny
-    const migrated = parsed.map((item) => {
-      if (!item || !item.vehicle) return null;
-
-      if (!item.recommendation || !item.recommendation.verdict) {
-        hasChanges = true;
-        try {
-          const issues = item.issues || [];
-          const askingPrice = item.askingPrice || 0;
-          item.recommendation = generateRecommendation(item.vehicle, issues, askingPrice);
-        } catch {
-          item.recommendation = {
-            verdict: "negotiate",
-            headline: "Review Needed",
-            summary: "Please regenerate this report to view current recommendations.",
-            roadmap: []
-          };
-        }
-      }
-
-      if (!Array.isArray(item.issues)) { item.issues = []; hasChanges = true; }
-      if (!Array.isArray(item.recalls)) { item.recalls = []; hasChanges = true; }
-
-      return item;
-    }).filter((entry): entry is AnalysisState => entry !== null);
-
-    // Pokud došlo k opravě starých dat, ihned je přepíšeme v localStorage na disku
-    if (hasChanges) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-    }
-
-    return migrated;
-  } catch { 
-    return []; 
-  }
+    return parsed.map(validateAndMigrateEntry).filter((e): e is AnalysisState => e !== null);
+  } catch { return []; }
 }
 
 function saveToHistory(entry: AnalysisState) {
   try {
     const prev = loadHistory();
-    // Uložíme pouze vyčištěná data
-    const updated = [entry, ...prev].slice(0, 10);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...prev].slice(0, 10)));
+  } catch {}
+}
+
+function updateHistoryEntry(reportId: string, updates: Partial<AnalysisState>) {
+  try {
+    const prev = loadHistory();
+    const updated = prev.map((e) => e.reportId === reportId ? { ...e, ...updates } : e);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {}
 }
@@ -124,48 +93,173 @@ function Index() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
   const [history, setHistory] = useState<AnalysisState[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
-  useEffect(() => { 
-    setHistory(loadHistory()); 
+  useEffect(() => { setHistory(loadHistory()); }, []);
+
+  // Po návratu ze Stripe success URL — odemkni report
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    const reportId = params.get("report_id");
+
+    if (sessionId && reportId) {
+      // Vyčisti URL params
+      window.history.replaceState({}, "", "/");
+
+      // Najdi report v historii a odemkni ho
+      const hist = loadHistory();
+      const entry = hist.find((e) => e.reportId === reportId);
+      if (entry) {
+        const unlocked = { ...entry, unlocked: true };
+        updateHistoryEntry(reportId, { unlocked: true });
+        setAnalysis(unlocked);
+        setPhase("report");
+        setHistory(loadHistory());
+      }
+    }
   }, []);
 
-  const handleAnalyze = (data: LandingSubmit) => {
+  const handleAnalyze = async (data: LandingSubmit) => {
+    setIsAnalyzing(true);
+    setAnalyzeError(null);
+
     const vehicle = parseVehicle({
       text: data.manualText, make: data.make, model: data.model,
       year: data.year, engineType: data.engineType,
       mileage: data.mileage, vin: data.vin,
     });
     const marketplace = detectMarketplace(data.manualText);
-    const issues = generateIssues(vehicle) || [];
-    const recalls = generateRecalls(vehicle) || [];
-    const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
-    
-    const entry: AnalysisState = {
-      vehicle, marketplace, askingPrice: data.askingPrice,
-      issues, recalls, recommendation, timestamp: Date.now(),
-    };
-    
-    setAnalysis(entry);
-    saveToHistory(entry);
-    setHistory(loadHistory());
+    const reportId = generateReportId();
+
+    // Optimisticky přejdi na scanning view okamžitě
     setPhase("scanning");
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      // Claude API + NHTSA paralelně
+      const [aiResult, recallResult] = await Promise.allSettled([
+        analyzeVehicle({
+          data: {
+            listingText: data.manualText,
+            make: vehicle.make,
+            model: vehicle.model,
+            year: vehicle.year,
+            engineType: data.engineType,
+            mileage: vehicle.mileage,
+            askingPrice: data.askingPrice,
+          },
+        }),
+        fetchRecalls({
+          data: {
+            vin: data.vin,
+            make: vehicle.make,
+            model: vehicle.model,
+            year: vehicle.year,
+          },
+        }),
+      ]);
+
+      // Issues — AI nebo procedural fallback
+      let issues: Issue[] = [];
+      let sellerRedFlags: string[] = [];
+      let marketValueNote = "";
+
+      if (aiResult.status === "fulfilled" && aiResult.value.issues.length > 0) {
+        issues = aiResult.value.issues;
+        sellerRedFlags = aiResult.value.sellerRedFlags;
+        marketValueNote = aiResult.value.marketValueNote;
+      } else {
+        console.warn("Claude API failed, using procedural fallback:", aiResult.status === "rejected" ? aiResult.reason : "empty response");
+        issues = generateIssues(vehicle);
+      }
+
+      // Recalls — NHTSA nebo procedural fallback
+      let recalls: Recall[] = [];
+      let recallSource: AnalysisState["recallSource"] = "procedural";
+
+      if (recallResult.status === "fulfilled" && recallResult.value.recalls.length > 0) {
+        recalls = recallResult.value.recalls;
+        recallSource = recallResult.value.source as "vin" | "nhtsa";
+      } else {
+        recalls = generateRecalls(vehicle);
+      }
+
+      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
+
+      const entry: AnalysisState = {
+        vehicle, marketplace, askingPrice: data.askingPrice,
+        issues, recalls, recommendation,
+        timestamp: Date.now(),
+        reportId,
+        unlocked: false,
+        sellerRedFlags,
+        marketValueNote,
+        recallSource,
+      };
+
+      setAnalysis(entry);
+      saveToHistory(entry);
+      setHistory(loadHistory());
+
+    } catch (err) {
+      console.error("Analysis failed:", err);
+      // Procedural fallback pro celý report
+      const issues = generateIssues(vehicle);
+      const recalls = generateRecalls(vehicle);
+      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
+
+      const entry: AnalysisState = {
+        vehicle, marketplace, askingPrice: data.askingPrice,
+        issues, recalls, recommendation,
+        timestamp: Date.now(),
+        reportId,
+        unlocked: false,
+        recallSource: "procedural",
+      };
+
+      setAnalysis(entry);
+      saveToHistory(entry);
+      setHistory(loadHistory());
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const goHome = () => { 
-    setPhase("landing"); 
-    setAnalysis(null); 
-    window.scrollTo({ top: 0, behavior: "smooth" }); 
-  };
+  const handleUnlock = async () => {
+    if (!analysis) return;
 
-  const handleLoadHistory = (rawEntry: any) => {
-    // Před načtením z historie data striktně zvalidujeme a opravíme
-    const validEntry = validateAndMigrateEntry(rawEntry);
-    if (validEntry) {
-      setAnalysis(validEntry);
+    const vehicleLabel = `${analysis.vehicle.year ?? ""} ${analysis.vehicle.make} ${analysis.vehicle.model}`.trim();
+
+    try {
+      const result = await createCheckoutSession({
+        data: {
+          vehicleLabel,
+          reportId: analysis.reportId,
+          successUrl: window.location.origin,
+          cancelUrl: window.location.origin,
+        },
+      });
+
+      if (result.sessionUrl) {
+        window.location.href = result.sessionUrl;
+      }
+    } catch (err) {
+      console.error("Stripe checkout failed:", err);
+      // Dev fallback — odemkni přímo bez platby (pouze pokud není STRIPE_SECRET_KEY)
+      setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+      updateHistoryEntry(analysis.reportId, { unlocked: true });
       setPhase("report");
       window.scrollTo({ top: 0 });
     }
+  };
+
+  const goHome = () => {
+    setPhase("landing");
+    setAnalysis(null);
+    setAnalyzeError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -177,25 +271,37 @@ function Index() {
       />
       <main className="relative z-10 flex-1">
         {phase === "landing" && (
-          <LandingView 
-            onSubmit={handleAnalyze} 
-            history={history} 
-            onLoadHistory={handleLoadHistory} 
+          <LandingView
+            onSubmit={handleAnalyze}
+            history={history}
+            onLoadHistory={(rawEntry) => {
+              const valid = validateAndMigrateEntry(rawEntry);
+              if (valid) {
+                setAnalysis(valid);
+                setPhase(valid.unlocked ? "report" : "preview");
+                window.scrollTo({ top: 0 });
+              }
+            }}
           />
         )}
-        
+
         {phase === "scanning" && (
-          <ScanningView onDone={() => { setPhase("preview"); window.scrollTo({ top: 0 }); }} />
-        )}
-        
-        {phase === "preview" && analysis && (
-          <FreePreviewView 
-            vehicle={analysis.vehicle} 
-            issues={analysis.issues} 
-            onUnlock={() => { setPhase("report"); window.scrollTo({ top: 0 }); }} 
+          <ScanningView
+            onDone={() => {
+              setPhase("preview");
+              window.scrollTo({ top: 0 });
+            }}
           />
         )}
-        
+
+        {phase === "preview" && analysis && (
+          <FreePreviewView
+            vehicle={analysis.vehicle}
+            issues={analysis.issues}
+            onUnlock={handleUnlock}
+          />
+        )}
+
         {phase === "report" && analysis && (
           <ReportView
             vehicle={analysis.vehicle}
@@ -204,6 +310,9 @@ function Index() {
             issues={analysis.issues}
             recalls={analysis.recalls}
             recommendation={analysis.recommendation}
+            sellerRedFlags={analysis.sellerRedFlags}
+            marketValueNote={analysis.marketValueNote}
+            recallSource={analysis.recallSource}
             onNewReport={goHome}
           />
         )}
