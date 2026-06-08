@@ -2,3 +2,9 @@
   "installCommand": "bun install",
   "buildCommand": "bun run build"
 }
+
+"scripts": {
+  "dev": "vinxi dev",
+  "build": "vinxi build",
+  "start": "vinxi start"
+}
