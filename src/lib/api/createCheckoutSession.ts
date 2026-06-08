@@ -11,7 +11,7 @@ const InputSchema = z.object({
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
-  .handler(async ({ input }) => { // OPRAVA: Změněno z { data } na { input }
+  .handler(async ({ data }) => { // OPRAVA: Změněno zpět na { data }
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: "2024-12-18.acacia",
     });
@@ -24,17 +24,17 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
             currency: "usd",
             product_data: {
               name: `Idle Check — Full Report`,
-              description: `${input.vehicleLabel} inspection report`, // OPRAVA: Použití input
+              description: `${data.vehicleLabel} inspection report`, // OPRAVA: data místo input
             },
             unit_amount: 499, // $4.99 v centech
           },
           quantity: 1,
         },
       ],
-      success_url: `${input.successUrl}?session_id={CHECKOUT_SESSION_ID}&report_id=${input.reportId}`, // OPRAVA: Použití input
-      cancel_url: input.cancelUrl, // OPRAVA: Použití input
+      success_url: `${data.successUrl}?session_id={CHECKOUT_SESSION_ID}&report_id=${data.reportId}`, // OPRAVA: data místo input
+      cancel_url: data.cancelUrl, // OPRAVA: data místo input
       metadata: {
-        reportId: input.reportId, // OPRAVA: Použití input
+        reportId: data.reportId, // OPRAVA: data místo input
       },
     });
 
