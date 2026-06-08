@@ -161,7 +161,7 @@ export function ReportView({
           <ul className="flex min-w-max items-center gap-1 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em]">
             {navItems.map((item) => (
               <li key={item.href}>
-                
+                <a
                   href={item.href}
                   className="block whitespace-nowrap rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
