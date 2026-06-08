@@ -111,7 +111,7 @@ export function ReportView({
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {RepairCostTracker && <RepairCostTracker issues={issues} checked={checked} askingPrice={displayPrice} />}
+          <RepairCostTracker issues={issues} checked={checked} askingPrice={displayPrice} />
           <NegotiationScript
             vehicle={vehicle} askingPrice={displayPrice}
             checkedIssues={checkedIssues} repairTotal={grandTotal} suggestedOffer={suggestedOffer}
