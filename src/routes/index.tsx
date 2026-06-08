@@ -224,21 +224,22 @@ function Index() {
     const vehicleLabel = `${analysis.vehicle.year ?? ""} ${analysis.vehicle.make} ${analysis.vehicle.model}`.trim();
 
     try {
-      // OPRAVA: Parametry posíláme rovnou bez objektu 'data'
+      // OPRAVA: Data jdou zpět do objektu "data", aby je klientská RPC proxy správně doručila Zodu
       const result = await createCheckoutSession({
-        vehicleLabel,
-        reportId: analysis.reportId,
-        successUrl: window.location.origin,
-        cancelUrl: window.location.origin,
+        data: {
+          vehicleLabel,
+          reportId: analysis.reportId,
+          successUrl: window.location.origin,
+          cancelUrl: window.location.origin,
+        },
       });
 
-      // OPRAVA: Provedení reálného přesměrování uživatele na Stripe
       if (result?.sessionUrl) {
         window.location.href = result.sessionUrl;
       }
     } catch (err) {
       console.error("Stripe checkout failed:", err);
-      // Dev fallback — pokud Stripe selže (např. chybí klíč), odemkneme bezplatně, aby aplikace nezamrzla
+      // Nouzový fallback pro vývoj/chyby — pokud selže backend, odemkne se report zdarma
       setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
       updateHistoryEntry(analysis.reportId, { unlocked: true });
       setPhase("report");
