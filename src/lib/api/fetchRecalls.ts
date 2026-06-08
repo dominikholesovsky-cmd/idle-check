@@ -11,14 +11,14 @@ const InputSchema = z.object({
 
 export const fetchRecalls = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
-  .handler(async ({ data }) => {
+  .handler(async ({ input }) => { // OPRAVA: Změněno z data na input
     const recalls: Recall[] = [];
 
     try {
-      if (data.vin && data.vin.length === 17) {
+      if (input.vin && input.vin.length === 17) { // OPRAVA: input místo data
         // VIN-based lookup — most accurate
         const res = await fetch(
-          `https://api.nhtsa.gov/recalls/recallsByVehicle?vin=${data.vin}`,
+          `https://api.nhtsa.gov/recalls/recallsByVehicle?vin=${input.vin}`,
           { signal: AbortSignal.timeout(8000) }
         );
 
@@ -43,10 +43,10 @@ export const fetchRecalls = createServerFn({ method: "POST" })
       }
 
       // Fallback — make/model/year lookup
-      if (data.make && data.model && data.year) {
-        const make = encodeURIComponent(data.make.toUpperCase());
-        const model = encodeURIComponent(data.model.toUpperCase());
-        const year = data.year;
+      if (input.make && input.model && input.year) { // OPRAVA: input místo data
+        const make = encodeURIComponent(input.make.toUpperCase());
+        const model = encodeURIComponent(input.model.toUpperCase());
+        const year = input.year;
 
         const res = await fetch(
           `https://api.nhtsa.gov/recalls/recallsByVehicle?make=${make}&model=${model}&modelYear=${year}`,
@@ -72,7 +72,6 @@ export const fetchRecalls = createServerFn({ method: "POST" })
       }
     } catch (err) {
       console.error("NHTSA fetch failed:", err);
-      // Vrátí prázdné pole — fallback na procedural recalls se postará index.tsx
     }
 
     return { recalls, source: recalls.length > 0 ? "nhtsa" : "none" };
