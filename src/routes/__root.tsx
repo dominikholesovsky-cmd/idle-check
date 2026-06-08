@@ -87,8 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Idle Check — Inspect any used car listing before you go see it" },
       { name: "twitter:description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ee87f736-e32f-4e11-a712-940fb502e1d5/id-preview-6474e130--cc02cf92-2420-4fa1-b63c-ed6b2782e3ca.lovable.app-1780386337733.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ee87f736-e32f-4e11-a712-940fb502e1d5/id-preview-6474e130--cc02cf92-2420-4fa1-b63c-ed6b2782e3ca.lovable.app-1780386337733.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/p3p0Oj3t3dZuKLeVLy6k62MkXAt2/social-images/social-1780913215336-header.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/p3p0Oj3t3dZuKLeVLy6k62MkXAt2/social-images/social-1780913215336-header.webp" },
     ],
     links: [
       {
