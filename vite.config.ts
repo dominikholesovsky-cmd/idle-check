@@ -3,24 +3,22 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import nitro from "nitro/vite";
+import { nitro } from "nitro/vite"; // Opraveno na pojmenovaný import
 
 export default defineConfig({
   plugins: [
-    tanstackStart({
-      server: { entry: "server" },
-    }),
+    tanstackStart(),
     nitro({
-      preset: "vercel",
+      preset: "vercel"
     }),
     viteReact(),
     tailwindcss(),
-    tsconfigPaths(),
+    tsconfigPaths()
   ],
   resolve: {
     alias: {
-      "@": "/src",
+      "@": "/src"
     },
-    dedupe: ["react", "react-dom", "@tanstack/react-router"],
-  },
+    dedupe: ["react", "react-dom", "@tanstack/react-router"]
+  }
 });
