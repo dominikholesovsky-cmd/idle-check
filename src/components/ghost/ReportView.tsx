@@ -53,8 +53,12 @@ export function ReportView({
     return Array.isArray(issues) ? issues.filter((i) => checked.has(i.id)) : [];
   }, [issues, checked]);
 
-  const partsTotal = checkedIssues.reduce((s, i) => s + Math.round(((i.partsCostMin || 0) + (i.partsCostMax || 0)) / 2), 0);
-  const labourTotal = checkedIssues.reduce((s, i) => s + Math.round((i.labourHours || 0) * 120), 0);
+  const partsTotal = checkedIssues.reduce(
+    (s, i) => s + Math.round(((i.partsCostMin || 0) + (i.partsCostMax || 0)) / 2), 0
+  );
+  const labourTotal = checkedIssues.reduce(
+    (s, i) => s + Math.round((i.labourHours || 0) * 120), 0
+  );
   const grandTotal = partsTotal + labourTotal;
   const suggestedOffer = Math.max(0, Math.round((askingPrice || 0) - grandTotal * 0.65));
 
@@ -70,23 +74,34 @@ export function ReportView({
   }, [recommendation, vehicle, issues, askingPrice]);
 
   if (!vehicle) {
-    return <div className="p-8 text-center text-muted-foreground">Loading vehicle data...</div>;
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Loading vehicle data...
+      </div>
+    );
   }
 
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
   const trimStr = vehicle.trim ? ` (${vehicle.trim})` : "";
   const mileageStr = vehicle.mileage != null ? ` · ${vehicle.mileage.toLocaleString()} mi` : "";
   const displayPrice = askingPrice || 0;
-
-  const hasRedFlags = sellerRedFlags && sellerRedFlags.length > 0;
+  const hasRedFlags = Array.isArray(sellerRedFlags) && sellerRedFlags.length > 0;
   const hasMarketNote = marketValueNote && marketValueNote.trim().length > 0;
 
-  // Recall source badge config
-  const recallBadge = recallSource === "vin"
-    ? { label: "Live NHTSA · VIN verified", icon: ShieldCheck, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" }
+  const recallBadgeConfig = recallSource === "vin"
+    ? { label: "Live NHTSA · VIN verified", Icon: ShieldCheck, color: "text-emerald-600" }
     : recallSource === "nhtsa"
-    ? { label: "Live NHTSA · Make/Model/Year", icon: Shield, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" }
-    : { label: "Estimated recall data", icon: Shield, color: "text-muted-foreground", bg: "bg-muted/40", border: "border-border" };
+    ? { label: "Live NHTSA · Make/Model/Year", Icon: Shield, color: "text-emerald-600" }
+    : { label: "Estimated recall data", Icon: Shield, color: "text-muted-foreground" };
+
+  const navItems = [
+    { href: "#verdict", label: "Verdict" },
+    ...(hasRedFlags ? [{ href: "#red-flags", label: `Red Flags · ${sellerRedFlags.length}` }] : []),
+    { href: "#checklist", label: `Checklist${issues.length ? ` · ${issues.length}` : ""}` },
+    { href: "#budget", label: "Repair Budget" },
+    { href: "#negotiation", label: "Negotiation" },
+    { href: "#recalls", label: `Recalls${recalls.length ? ` · ${recalls.length}` : ""}` },
+  ];
 
   return (
     <section className="view-fade-in relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -144,20 +159,13 @@ export function ReportView({
       >
         <div className="overflow-x-auto px-1 py-1">
           <ul className="flex min-w-max items-center gap-1 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em]">
-            {[
-              { href: "#verdict", label: "Verdict" },
-              hasRedFlags ? { href: "#red-flags", label: `Red Flags · ${sellerRedFlags!.length}` } : null,
-              { href: "#checklist", label: `Checklist${issues.length ? ` · ${issues.length}` : ""}` },
-              { href: "#budget", label: "Repair Budget" },
-              { href: "#negotiation", label: "Negotiation" },
-              { href: "#recalls", label: `Recalls${recalls.length ? ` · ${recalls.length}` : ""}` },
-            ].filter(Boolean).map((item) => (
-              <li key={item!.href}>
+            {navItems.map((item) => (
+              <li key={item.href}>
                 
-                  href={item!.href}
+                  href={item.href}
                   className="block whitespace-nowrap rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  {item!.label}
+                  {item.label}
                 </a>
               </li>
             ))}
@@ -198,7 +206,7 @@ export function ReportView({
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-3.5 w-3.5 text-primary" />
             <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-              Seller Red Flags · {sellerRedFlags!.length} detected
+              Seller Red Flags · {sellerRedFlags.length} detected
             </h2>
           </div>
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
@@ -206,7 +214,7 @@ export function ReportView({
               These phrases or omissions in the listing text suggest the seller may be hiding something or the car has undisclosed issues.
             </p>
             <ul className="space-y-2">
-              {sellerRedFlags!.map((flag, i) => (
+              {sellerRedFlags.map((flag, i) => (
                 <li key={i} className="flex items-start gap-2.5">
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                   <span className="text-[13px] leading-relaxed text-foreground">{flag}</span>
@@ -260,12 +268,11 @@ export function ReportView({
       </div>
 
       {/* Recalls */}
-      <div id="recalls" className="scroll-mt-32">
-        {/* Recall source badge */}
-        <div className="mt-10 mb-3 flex items-center gap-2">
-          <recallBadge.icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
-          <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
-            {recallBadge.label}
+      <div id="recalls" className="scroll-mt-32 mt-10">
+        <div className="mb-3 flex items-center gap-2">
+          <recallBadgeConfig.Icon className={`h-3.5 w-3.5 ${recallBadgeConfig.color}`} />
+          <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadgeConfig.color}`}>
+            {recallBadgeConfig.label}
           </span>
         </div>
         <RecallSection recalls={recalls} />
