@@ -101,7 +101,7 @@ export function InspectionChecklist({
   recommendedIds: Set<string>;
 }) {
   return (
-    <Accordion type="multiple" defaultValue={CATEGORIES} className="space-y-3">
+    <Accordion type="multiple" defaultValue={[]} className="space-y-3">
       {CATEGORIES.map((cat) => {
         const items = issues.filter((i) => i.category === cat);
         const recCount = items.filter((i) => recommendedIds.has(i.id)).length;

@@ -24,52 +24,43 @@ export function RepairCostTracker({
   const count = checkedIssues.length;
 
   return (
-    <div className="rounded-xl border border-border bg-foreground p-5 text-background shadow-[0_2px_16px_rgba(0,0,0,0.12)]">
-      <div className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-background/60">
+    <div className="rounded-xl border border-border bg-card p-5">
+      <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         Estimated US Repair Budget
       </div>
 
-      {/* Grand total */}
-      <div className="mt-2 font-mono text-3xl font-bold tabular-nums sm:text-4xl">
+      <div className="mt-2 font-mono text-3xl font-bold tabular-nums text-foreground sm:text-4xl">
         ${grandTotal.toLocaleString()}
       </div>
-      <div className="mt-1 font-condensed text-[11px] uppercase tracking-wider text-background/60">
+      <div className="mt-1 font-condensed text-[11px] uppercase tracking-wider text-muted-foreground">
         {count} {count === 1 ? "item" : "items"} flagged
       </div>
 
-      {/* Breakdown */}
       {count > 0 && (
-        <div className="mt-4 space-y-2 border-t border-background/15 pt-4">
+        <div className="mt-4 space-y-2 border-t border-border pt-4">
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-background/70">Parts only</span>
-            <span className="font-mono font-semibold text-background">
+            <span className="text-muted-foreground">Parts only</span>
+            <span className="font-mono font-semibold text-foreground">
               ${partsTotal.toLocaleString()}
             </span>
           </div>
           <div className="flex items-center justify-between text-[13px]">
-            <span className="text-background/70">
+            <span className="text-muted-foreground">
               Avg labour
-              <span className="ml-1 font-condensed text-[10px] uppercase tracking-wider text-background/50">
+              <span className="ml-1 font-condensed text-[10px] uppercase tracking-wider text-muted-foreground/70">
                 @ ${LABOUR_RATE}/hr
               </span>
             </span>
-            <span className="font-mono font-semibold text-background">
+            <span className="font-mono font-semibold text-foreground">
               ${labourTotal.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between border-t border-background/15 pt-2 text-[14px]">
-            <span className="font-semibold text-background">Total estimate</span>
-            <span className="font-mono font-bold text-background">
-              ${grandTotal.toLocaleString()}
             </span>
           </div>
         </div>
       )}
 
-      {/* Suggested offer */}
-      <div className="mt-4 border-t border-background/15 pt-3 text-[13px] text-background/70">
+      <div className="mt-4 border-t border-border pt-3 text-[13px] text-muted-foreground">
         Suggested opening offer:{" "}
-        <span className="font-mono font-semibold text-background">
+        <span className="font-mono font-semibold text-foreground">
           ${suggestedOffer.toLocaleString()}
         </span>
       </div>

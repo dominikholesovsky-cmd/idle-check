@@ -11,7 +11,7 @@ const InputSchema = z.object({
 
 export const fetchRecalls = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
-  .handler(async ({ input }) => { // OPRAVA: Změněno z data na input
+  .handler(async ({ data: input }) => {
     const recalls: Recall[] = [];
 
     try {
