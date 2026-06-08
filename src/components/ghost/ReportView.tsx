@@ -2,17 +2,12 @@ import { useMemo, useState } from "react";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InspectionChecklist } from "./InspectionChecklist";
-import * as RepairTrackerModule from "./RepairCostTracker";
+import { RepairCostTracker } from "./RepairCostTracker";
 import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
-import { generateRecommendation } from "@/lib/ghost/procedural"; // NAIMPORTUJE VÝPOČETNÍ FUNKCI
+import { generateRecommendation } from "@/lib/ghost/procedural";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
-
-const RepairCostTracker = 
-  RepairTrackerModule.RepairCostTracker || 
-  RepairTrackerModule.default || 
-  Object.values(RepairTrackerModule).find((val) => typeof val === "function");
 
 export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [], recommendation, onNewReport,
