@@ -3,6 +3,7 @@ import { Clock, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { NhtsaStatus } from "./NhtsaStatus";
 import type { AnalysisState } from "@/routes/index";
 
 export interface LandingSubmit {
@@ -364,12 +365,15 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
             {/* VIN — optional */}
             <div>
-              <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                VIN
-                <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/70">
-                  — optional, enables NHTSA recall lookup
-                </span>
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label className="block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  VIN
+                  <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/70">
+                    — optional, enables NHTSA recall lookup
+                  </span>
+                </label>
+                <NhtsaStatus />
+              </div>
               <Input
                 value={vin}
                 onChange={(e) => setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ""))}
