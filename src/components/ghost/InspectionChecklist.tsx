@@ -67,7 +67,7 @@ function PartsSection({ parts }: { parts: IssuePart[] }) {
                   {part.source}
                 </span>
                 {part.url && (
-                  
+                  <a
                     href={part.url}
                     target="_blank"
                     rel="noopener noreferrer"
