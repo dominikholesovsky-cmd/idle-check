@@ -1,4 +1,3 @@
 {
-  "regions": ["iad1"],
-  "maxDuration": 60
+  "regions": ["iad1"]
 }
