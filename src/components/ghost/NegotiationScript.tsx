@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Issue, Vehicle } from "@/lib/ghost/types";
 
+function roundHundred(n: number): number {
+  return Math.round(n / 100) * 100;
+}
+
 export function NegotiationScript({
   vehicle,
   askingPrice,
@@ -25,9 +29,12 @@ export function NegotiationScript({
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
+  const repairRounded = roundHundred(repairTotal);
+  const offerRounded = roundHundred(suggestedOffer);
+  const askingRounded = roundHundred(askingPrice);
+
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
   const modelStr = `${yearStr}${vehicle.make} ${vehicle.model}`.trim();
-
   const issueNames = checkedIssues.map((i) => i.label.toLowerCase());
   const issuesSentence =
     checkedIssues.length === 0
@@ -39,16 +46,14 @@ export function NegotiationScript({
       : `${issueNames.slice(0, -1).join(", ")}, and ${issueNames[issueNames.length - 1]}`;
 
   const opener = `Hey! I came across your ${modelStr} listing and I've actually been looking at a few of these.`;
-
   const middle =
     checkedIssues.length > 0
-      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${repairTotal.toLocaleString()} at a shop.`
+      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${repairRounded.toLocaleString()} at a shop.`
       : `I did some research before reaching out and the listing looks solid on paper.`;
-
   const close =
     checkedIssues.length > 0
-      ? `I'd be comfortable at $${suggestedOffer.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
-      : `I'd be comfortable at $${askingPrice.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`;
+      ? `I'd be comfortable at $${offerRounded.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
+      : `I'd be comfortable at $${askingRounded.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`;
 
   const script = `${opener}\n\n${middle}\n\n${close}`;
 
@@ -80,17 +85,15 @@ export function NegotiationScript({
             Your Cash Offer
           </div>
           <div className="font-mono text-2xl font-bold tabular-nums text-primary">
-            ${suggestedOffer.toLocaleString()}
+            ${offerRounded.toLocaleString()}
           </div>
         </div>
       </div>
-
       <Textarea
         readOnly
         value={script}
         className="mt-4 min-h-56 resize-none text-[14px] leading-relaxed"
       />
-
       <Button
         onClick={handleCopy}
         className={`cta-active mt-4 h-12 w-full text-sm font-semibold tracking-wide transition-colors ${

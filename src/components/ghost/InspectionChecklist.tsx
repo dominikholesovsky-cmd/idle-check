@@ -139,7 +139,8 @@ function Row({
           </span>
           <span className="flex items-center gap-2 shrink-0">
             <span className="font-mono text-[13px] font-semibold tabular-nums">
-              ${issue.costMin.toLocaleString()} – ${issue.costMax.toLocaleString()}
+              ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
+              <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-muted-foreground">parts</span>
             </span>
             <ChevronDown
               className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
