@@ -29,6 +29,29 @@ export function ReportView({
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState<string>("verdict");
+
+  useEffect(() => {
+    const ids = ["section-verdict", "section-issues", "section-negotiation", "section-recalls"];
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (!els.length) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id.replace("section-", ""));
+      },
+      { rootMargin: "-30% 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(`section-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     const onScroll = () => {
@@ -101,10 +124,10 @@ export function ReportView({
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const BG = "#0f0f0f";
+    const BG = "#ffffff";
     const ACCENT = "#b22222";
-    const WHITE = "#ffffff";
-    const MUTED = "#9ca3af";
+    const WHITE = "#111111";
+    const MUTED = "#6b7280";
 
     const paintBg = () => {
       doc.setFillColor(BG);
@@ -152,9 +175,9 @@ export function ReportView({
 
     const tableTheme = {
       headStyles: { fillColor: ACCENT, textColor: WHITE, fontStyle: "bold" as const },
-      bodyStyles: { fillColor: "#1a1a1a", textColor: WHITE },
-      alternateRowStyles: { fillColor: "#161616" },
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#2a2a2a", lineWidth: 0.3 },
+      bodyStyles: { fillColor: "#f9f9f9", textColor: "#111111" },
+      alternateRowStyles: { fillColor: "#f3f3f3" },
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#e5e5e5", lineWidth: 0.3 },
       margin: { left: 40, right: 40 },
     };
 
@@ -258,9 +281,16 @@ export function ReportView({
     doc.save(fname);
   };
 
+  const navItems = [
+    { id: "verdict", label: "Verdict" },
+    { id: "issues", label: "Issues" },
+    { id: "negotiation", label: "Negotiation" },
+    { id: "recalls", label: "Recalls" },
+  ];
+
   return (
     <>
-      {/* Fixed scroll progress bar */}
+      {/* Fixed scroll progress bar (top) */}
       <div
         className="fixed left-0 right-0 top-0 z-50 h-[3px] bg-transparent"
         aria-hidden
@@ -271,6 +301,41 @@ export function ReportView({
         />
       </div>
 
+      {/* Fixed left sidebar (desktop only) */}
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-border bg-card lg:block">
+        {/* Vertical progress bar on left edge */}
+        <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
+          <div
+            className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
+            style={{ height: `${scrollProgress * 100}%` }}
+          />
+        </div>
+        <div className="flex h-full flex-col px-5 py-6">
+          <div className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-primary">
+            IDLE CHECK
+          </div>
+          <nav className="mt-10 flex flex-col gap-1">
+            {navItems.map((item) => {
+              const active = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                    active
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      <div className="lg:pl-[200px]">
       <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
         {/* Status bar */}
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
@@ -324,7 +389,9 @@ export function ReportView({
         </div>
 
         {/* Verdict */}
-        <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+        <div id="section-verdict">
+          <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+        </div>
 
         {/* Market value */}
         {hasMarketNote && (
@@ -360,7 +427,7 @@ export function ReportView({
         )}
 
         {/* Checklist + Budget sidebar */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -393,7 +460,7 @@ export function ReportView({
         </div>
 
         {/* Negotiation */}
-        <div className="mx-auto w-full max-w-3xl">
+        <div id="section-negotiation" className="mx-auto w-full max-w-3xl">
           <NegotiationScript
             vehicle={vehicle}
             askingPrice={displayPrice}
@@ -404,7 +471,7 @@ export function ReportView({
         </div>
 
         {/* Recalls */}
-        <div>
+        <div id="section-recalls">
           <div className="mb-3 flex items-center gap-2">
             <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
             <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
@@ -420,6 +487,8 @@ export function ReportView({
           )}
         </div>
       </section>
+      </div>
     </>
+
   );
 }
