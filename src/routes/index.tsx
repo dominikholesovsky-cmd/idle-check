@@ -123,9 +123,11 @@ function Index() {
     }
   }, [animationReady]);
 
-  // Unlocking → předej AI data do analysisu jakmile Claude skončí
+  // Unlocking → předej AI data jakmile Claude skončí
   useEffect(() => {
+    console.log("claudeReady effect:", claudeReady, "phase:", phase, "upgradedEntryRef:", !!upgradedEntryRef.current);
     if (claudeReady && phase === "unlocking" && upgradedEntryRef.current) {
+      console.log("Transitioning to report with AI data");
       const entry = upgradedEntryRef.current;
       upgradedEntryRef.current = null;
       setClaudeReady(false);
@@ -141,16 +143,22 @@ function Index() {
 
     if (!sessionId || !reportId) return;
 
-    // sessionStorage přežije page reload — zabrání dvojímu volání
     const callKey = `claude-called-${reportId}`;
-    if (sessionStorage.getItem(callKey)) return;
+    if (sessionStorage.getItem(callKey)) {
+      console.log("Claude already called for this reportId, skipping");
+      return;
+    }
     sessionStorage.setItem(callKey, "1");
 
     window.history.replaceState({}, "", "/");
     const hist = loadHistory();
     const entry = hist.find((e) => e.reportId === reportId);
-    if (!entry) return;
+    if (!entry) {
+      console.error("Entry not found in history for reportId:", reportId);
+      return;
+    }
 
+    console.log("Starting Claude analysis for reportId:", reportId);
     updateHistoryEntry(reportId, { unlocked: true });
     setAnalysis({ ...entry, unlocked: true });
     setPhase("unlocking");
@@ -168,6 +176,7 @@ function Index() {
       },
     })
       .then((aiResult) => {
+        console.log("Claude finished, issues:", aiResult.issues.length);
         if (aiResult.issues.length > 0) {
           const upgraded: AnalysisState = {
             ...entry,
@@ -183,12 +192,16 @@ function Index() {
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
           });
+          console.log("upgradedEntryRef set with AI data");
         } else {
+          console.log("Claude returned 0 issues, using procedural data");
           upgradedEntryRef.current = { ...entry, unlocked: true };
         }
+        console.log("Calling setClaudeReady(true)");
         setClaudeReady(true);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Claude failed:", err);
         upgradedEntryRef.current = { ...entry, unlocked: true };
         setClaudeReady(true);
       });

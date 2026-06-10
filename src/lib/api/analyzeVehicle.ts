@@ -26,7 +26,7 @@ function sanitizeInput(text: string): string {
   return text
     .replace(/<[^>]*>/g, "")
     .replace(/ignore previous instructions/gi, "")
-    .slice(0, 8000)
+    .slice(0, 4000)
     .trim();
 }
 
@@ -57,63 +57,37 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
 
     const client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      timeout: 30000,
+      timeout: 55000,
     });
-    const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
 
-    const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this listing and return a JSON inspection report.
+    const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
+    const hasListing = listingText.trim().length > 20;
+
+    const prompt = `Expert used car inspector. Return JSON only.
 
 Vehicle: ${vehicleStr}
-Mileage: ${mileage ? `${mileage.toLocaleString()} miles` : "unknown"}
-Asking price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
+Mileage: ${mileage ? `${mileage.toLocaleString()} mi` : "unknown"}
+Price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
+${hasListing ? `\nListing (check for red flags and mentioned issues):\n"""${sanitizeInput(listingText)}"""` : ""}
 
-Listing text:
-${sanitizeInput(listingText)}
+JSON format:
+{"issues":[{"id":"str","label":"max 6 words","category":"Engine & Drivetrain"|"Chassis & Suspension"|"Body & Electrical","severity":"HIGH"|"MED"|"LOW","costMin":0,"costMax":0,"partsCostMin":0,"partsCostMax":0,"labourHours":0,"explanation":"2 sentences. Mention if listing hints at this.","urgency":"Immediate"|"Soon"|"Monitor"}],"sellerRedFlags":["specific red flags from listing or []"],"marketValueNote":"one sentence"}
 
-Return ONLY valid JSON, no markdown, no explanation:
-{
-  "issues": [
-    {
-      "id": "unique_snake_case_string",
-      "label": "Short issue title (max 6 words)",
-      "category": "Engine & Drivetrain" | "Chassis & Suspension" | "Body & Electrical",
-      "severity": "HIGH" | "MED" | "LOW",
-      "costMin": number,
-      "costMax": number,
-      "partsCostMin": number,
-      "partsCostMax": number,
-      "labourHours": number,
-      "explanation": "2-3 sentences explaining the issue, why it matters for this specific model, and what to check during inspection.",
-      "urgency": "Immediate" | "Soon" | "Monitor"
-    }
-  ],
-  "sellerRedFlags": ["string"],
-  "marketValueNote": "One sentence about price vs market value"
-}
-
-Rules:
-- Return 5-7 issues specific to ${vehicleStr}
-- Focus on top known model-specific problems only
-- costMin/costMax = partsCostMin/partsCostMax + (labourHours * 120)
-- partsCostMin/partsCostMax = parts only in USD
-- labourHours = realistic shop hours
-- HIGH = safety issue or $500+ total
-- MED = $150-500 or affects reliability
-- LOW = cosmetic or under $150`;
+Rules: 5 issues max. Model-specific problems. costMin=partsCostMin+(labourHours*120). HIGH=$500+. MED=$150-500. LOW=under $150.${hasListing ? " Prioritize issues hinted in listing." : ""}`;
 
     try {
       console.log("analyzeVehicle: calling Claude for", vehicleStr);
 
       const message = await client.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 1500,
+        model: "claude-haiku-4-5",
+        max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       });
 
       const responseText =
         message.content[0].type === "text" ? message.content[0].text : "";
 
-      if (!responseText) throw new Error("Empty response from Claude");
+      if (!responseText) throw new Error("Empty response");
 
       const parsed = JSON.parse(extractJson(responseText));
 
