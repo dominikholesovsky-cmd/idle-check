@@ -41,6 +41,9 @@ export interface AnalysisState {
   sellerRedFlags?: string[];
   marketValueNote?: string;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
+  // Původní listing data pro Claude po platbě
+  listingText?: string;
+  engineType?: string;
 }
 
 const STORAGE_KEY = "idle-check-history";
@@ -102,16 +105,14 @@ function Index() {
   const [history, setHistory] = useState<AnalysisState[]>([]);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
-  // Synchronizace: obě podmínky musí být splněny před přechodem na preview
-  const [apiReady, setApiReady] = useState(false);
   const [animationReady, setAnimationReady] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
-  // Přejdi na preview až když jsou hotové obě — API i animace
+  // Scanning — jen animace, žádné API
   useEffect(() => {
-    if (apiReady && animationReady && pendingEntryRef.current) {
+    if (animationReady && pendingEntryRef.current) {
       const entry = pendingEntryRef.current;
       pendingEntryRef.current = null;
       setAnalysis(entry);
@@ -120,8 +121,9 @@ function Index() {
       setPhase("preview");
       window.scrollTo({ top: 0 });
     }
-  }, [apiReady, animationReady]);
+  }, [animationReady]);
 
+  // Po Stripe redirectu — zavolej Claude API
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -132,18 +134,51 @@ function Index() {
       const hist = loadHistory();
       const entry = hist.find((e) => e.reportId === reportId);
       if (entry) {
-        const unlocked = { ...entry, unlocked: true };
         updateHistoryEntry(reportId, { unlocked: true });
-        setAnalysis(unlocked);
+        setAnalysis({ ...entry, unlocked: true });
         setPhase("unlocking");
         window.scrollTo({ top: 0 });
+
+        // Zavolej Claude API teď — uživatel zaplatil
+        analyzeVehicle({
+          data: {
+            listingText: entry.listingText ?? "",
+            make: entry.vehicle.make,
+            model: entry.vehicle.model,
+            year: entry.vehicle.year,
+            engineType: entry.engineType,
+            mileage: entry.vehicle.mileage,
+            askingPrice: entry.askingPrice,
+          },
+        }).then((aiResult) => {
+          if (aiResult.issues.length > 0) {
+            const upgraded = {
+              ...entry,
+              unlocked: true,
+              issues: aiResult.issues,
+              sellerRedFlags: aiResult.sellerRedFlags,
+              marketValueNote: aiResult.marketValueNote,
+            };
+            setAnalysis(upgraded);
+            updateHistoryEntry(reportId, {
+              unlocked: true,
+              issues: aiResult.issues,
+              sellerRedFlags: aiResult.sellerRedFlags,
+              marketValueNote: aiResult.marketValueNote,
+            });
+          } else {
+            // Claude selhal — použij procedurální data která už máme
+            setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+          }
+        }).catch(() => {
+          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+        });
       }
     }
   }, []);
 
   const handleAnalyze = async (data: LandingSubmit) => {
     setAnalyzeError(null);
-    setApiReady(false);
     setAnimationReady(false);
     pendingEntryRef.current = null;
 
@@ -159,64 +194,45 @@ function Index() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     try {
-      const [aiResult, recallResult] = await Promise.allSettled([
-        analyzeVehicle({
-          data: {
-            listingText: data.manualText,
-            make: vehicle.make,
-            model: vehicle.model,
-            year: vehicle.year,
-            engineType: data.engineType,
-            mileage: vehicle.mileage,
-            askingPrice: data.askingPrice,
-          },
-        }),
-        fetchRecalls({
-          data: {
-            vin: data.vin,
-            make: vehicle.make,
-            model: vehicle.model,
-            year: vehicle.year,
-          },
-        }),
-      ]);
-
-      let issues: Issue[] = [];
-      let sellerRedFlags: string[] = [];
-      let marketValueNote = "";
-
-      if (aiResult.status === "fulfilled" && aiResult.value.issues.length > 0) {
-        issues = aiResult.value.issues;
-        sellerRedFlags = aiResult.value.sellerRedFlags;
-        marketValueNote = aiResult.value.marketValueNote;
-      } else {
-        issues = generateIssues(vehicle);
-      }
+      // Pouze NHTSA recalls — Claude se nevolá
+      const recallResult = await fetchRecalls({
+        data: {
+          vin: data.vin,
+          make: vehicle.make,
+          model: vehicle.model,
+          year: vehicle.year,
+        },
+      });
 
       let recalls: Recall[] = [];
       let recallSource: AnalysisState["recallSource"] = "procedural";
 
-      if (recallResult.status === "fulfilled" && recallResult.value.recalls.length > 0) {
-        recalls = recallResult.value.recalls;
-        recallSource = recallResult.value.source as "vin" | "nhtsa";
+      if (recallResult.recalls.length > 0) {
+        recalls = recallResult.recalls;
+        recallSource = recallResult.source as "vin" | "nhtsa";
       } else {
         recalls = generateRecalls(vehicle);
       }
 
+      // Procedurální issues pro free preview
+      const issues = generateIssues(vehicle);
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
       pendingEntryRef.current = {
-        vehicle, marketplace, askingPrice: data.askingPrice,
-        issues, recalls, recommendation,
+        vehicle,
+        marketplace,
+        askingPrice: data.askingPrice,
+        issues,
+        recalls,
+        recommendation,
         timestamp: Date.now(),
         reportId,
         unlocked: false,
-        sellerRedFlags,
-        marketValueNote,
         recallSource,
+        // Uložíme listing data pro Claude po platbě
+        listingText: data.manualText,
+        engineType: data.engineType,
       };
-
-      setApiReady(true);
 
     } catch (err) {
       console.error("Analysis failed:", err);
@@ -225,16 +241,23 @@ function Index() {
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
       pendingEntryRef.current = {
-        vehicle, marketplace, askingPrice: data.askingPrice,
-        issues, recalls, recommendation,
+        vehicle,
+        marketplace,
+        askingPrice: data.askingPrice,
+        issues,
+        recalls,
+        recommendation,
         timestamp: Date.now(),
         reportId,
         unlocked: false,
         recallSource: "procedural",
+        listingText: data.manualText,
+        engineType: data.engineType,
       };
-
-      setApiReady(true);
     }
+
+    // Scanning animace teď řídí přechod — setApiReady nahrazeno přímým setAnimationReady
+    // ScanningView zavolá onDone až doběhne animace
   };
 
   const handleUnlock = async () => {
@@ -262,7 +285,6 @@ function Index() {
     setPhase("landing");
     setAnalysis(null);
     setAnalyzeError(null);
-    setApiReady(false);
     setAnimationReady(false);
     pendingEntryRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -294,7 +316,7 @@ function Index() {
         {phase === "scanning" && (
           <ScanningView
             onDone={() => setAnimationReady(true)}
-            apiReady={apiReady}
+            apiReady={true}
           />
         )}
 
