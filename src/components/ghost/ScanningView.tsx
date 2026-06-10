@@ -13,17 +13,23 @@ const SCAN_LINES = [
   "Report ready.",
 ];
 
-export function ScanningView({ onDone }: { onDone: () => void }) {
+export function ScanningView({
+  onDone,
+  apiReady,
+}: {
+  onDone: () => void;
+  apiReady: boolean;
+}) {
   const [visible, setVisible] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const [lineIdx, setLineIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
-  const [done, setDone] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
 
   useEffect(() => {
-    if (done) return;
+    if (animDone) return;
     if (lineIdx >= SCAN_LINES.length) {
-      setDone(true);
+      setAnimDone(true);
       return;
     }
     const line = SCAN_LINES[lineIdx];
@@ -41,14 +47,16 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
       setLineIdx((i) => i + 1);
     }, 400);
     return () => clearTimeout(t);
-  }, [lineIdx, charIdx, done]);
+  }, [lineIdx, charIdx, animDone]);
 
   useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(onDone, 600);
-    return () => clearTimeout(t);
-  }, [done]);
+    if (animDone && apiReady) {
+      const t = setTimeout(onDone, 400);
+      return () => clearTimeout(t);
+    }
+  }, [animDone, apiReady]);
 
+  const waiting = animDone && !apiReady;
   const isFinalLine = (s: string) => s.trim() === "Report ready.";
 
   return (
@@ -69,12 +77,25 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
               </span>
             </div>
           ))}
-          {!done && (
+          {!animDone && (
             <div className="flex gap-2">
               <span className="text-green-500">$</span>
               <span className="text-green-400">
                 {current}
                 <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-green-400 align-middle" />
+              </span>
+            </div>
+          )}
+          {waiting && (
+            <div className="flex gap-2">
+              <span className="text-green-500">$</span>
+              <span className="flex items-center gap-1 text-yellow-400/80">
+                Fetching live part prices
+                <span className="inline-flex gap-[3px] ml-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </span>
               </span>
             </div>
           )}
