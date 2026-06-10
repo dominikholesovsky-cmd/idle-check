@@ -41,7 +41,6 @@ function extractJson(text: string): string {
 export const analyzeVehicle = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
   .handler(async ({ data }) => {
-    console.log("analyzeVehicle called, API key present:", !!process.env.ANTHROPIC_API_KEY);
     const input = data?.data ?? data;
     const listingText = input?.listingText ?? "";
     const make = input?.make ?? "";
@@ -52,13 +51,14 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     const askingPrice = input?.askingPrice ?? null;
 
     if (!process.env.ANTHROPIC_API_KEY) {
+      console.log("analyzeVehicle: no API key");
       return { issues: [] as Issue[], sellerRedFlags: [] as string[], marketValueNote: "" };
     }
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
 
-    const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this listing and return accurate repair cost data with real current US market part prices.
+    const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this listing and return a JSON inspection report.
 
 Vehicle: ${vehicleStr}
 Mileage: ${mileage ? `${mileage.toLocaleString()} miles` : "unknown"}
@@ -66,8 +66,6 @@ Asking price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
 
 Listing text:
 ${sanitizeInput(listingText)}
-
-Use web_search to find real current prices for the most common failure parts on this specific vehicle on RockAuto.com. Search for specific part numbers and prices.
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
@@ -82,17 +80,8 @@ Return ONLY valid JSON, no markdown, no explanation:
       "partsCostMin": number,
       "partsCostMax": number,
       "labourHours": number,
-      "explanation": "2-3 sentences. Mention specific part price found (e.g. 'Water pump ~$85 on RockAuto, part #AW4078').",
-      "urgency": "Immediate" | "Soon" | "Monitor",
-      "parts": [
-        {
-          "name": "Exact part name",
-          "partNumber": "part number or null",
-          "priceUsd": 49.99,
-          "source": "RockAuto" | "eBay Motors" | "OEM Dealer" | "Estimated",
-          "url": "direct URL to part or null"
-        }
-      ]
+      "explanation": "2-3 sentences explaining the issue, why it matters for this specific model, and what to check during inspection.",
+      "urgency": "Immediate" | "Soon" | "Monitor"
     }
   ],
   "sellerRedFlags": ["string"],
@@ -102,89 +91,26 @@ Return ONLY valid JSON, no markdown, no explanation:
 Rules:
 - Return 6-10 issues specific to ${vehicleStr}
 - Focus on known model-specific problems
-- For EACH issue include 1-2 parts with real prices from web search
-- partsCostMin/partsCostMax must reflect actual found prices
 - costMin/costMax = partsCostMin/partsCostMax + (labourHours * 120)
+- partsCostMin/partsCostMax = parts only in USD
 - labourHours = realistic shop hours
 - HIGH = safety issue or $500+ total
 - MED = $150-500 or affects reliability
-- LOW = cosmetic or under $150
-- If part number not found after search, set partNumber to null
-- If URL not found, set url to null
-- Always prefer RockAuto prices over estimates`;
+- LOW = cosmetic or under $150`;
 
     try {
-      // Krok 1 — Claude provede web search
-      const firstResponse = await client.messages.create({
+      console.log("analyzeVehicle: calling Claude for", vehicleStr);
+
+      const message = await client.messages.create({
         model: "claude-sonnet-4-5",
-        max_tokens: 4000,
-        tools: [
-          {
-            type: "web_search_20250305" as any,
-            name: "web_search",
-          },
-        ],
+        max_tokens: 2000,
         messages: [{ role: "user", content: prompt }],
       });
 
-      // Krok 2 — vždy pokračuj, požádej o JSON
-      const followUp = await client.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 4000,
-        tools: [
-          {
-            type: "web_search_20250305" as any,
-            name: "web_search",
-          },
-        ],
-        messages: [
-          { role: "user", content: prompt },
-          { role: "assistant", content: firstResponse.content },
-          {
-            role: "user",
-            content: "Now return ONLY the JSON object. No explanation, no markdown, just the raw JSON starting with { and ending with }.",
-          },
-        ],
-      });
+      const responseText =
+        message.content[0].type === "text" ? message.content[0].text : "";
 
-      let responseText = "";
-      for (const block of followUp.content) {
-        if (block.type === "text") {
-          responseText = block.text;
-          break;
-        }
-      }
-
-      // Krok 3 — pokud stále není JSON, zkus ještě jedno kolo
-      if (!responseText || !responseText.includes('"issues"')) {
-        const finalResponse = await client.messages.create({
-          model: "claude-sonnet-4-5",
-          max_tokens: 4000,
-          messages: [
-            { role: "user", content: prompt },
-            { role: "assistant", content: firstResponse.content },
-            {
-              role: "user",
-              content: "Now return ONLY the JSON object. No explanation, no markdown, just the raw JSON starting with { and ending with }.",
-            },
-            { role: "assistant", content: followUp.content },
-            {
-              role: "user",
-              content: "Return the JSON now. Start your response with { and nothing else.",
-            },
-          ],
-        });
-        for (const block of finalResponse.content) {
-          if (block.type === "text") {
-            responseText = block.text;
-            break;
-          }
-        }
-      }
-
-      if (!responseText || !responseText.includes('"issues"')) {
-        throw new Error("No valid JSON response after retries");
-      }
+      if (!responseText) throw new Error("Empty response from Claude");
 
       const parsed = JSON.parse(extractJson(responseText));
 
@@ -200,16 +126,10 @@ Rules:
         labourHours: Number(item.labourHours) || 0,
         explanation: String(item.explanation),
         urgency: item.urgency as Urgency,
-        parts: Array.isArray(item.parts)
-          ? item.parts.map((p: any) => ({
-              name: String(p.name ?? ""),
-              partNumber: p.partNumber ? String(p.partNumber) : undefined,
-              priceUsd: p.priceUsd ? Number(p.priceUsd) : undefined,
-              source: p.source ?? "Estimated",
-              url: p.url ? String(p.url) : undefined,
-            }))
-          : [],
+        parts: [],
       }));
+
+      console.log("analyzeVehicle: success, issues:", issues.length);
 
       return {
         issues,
