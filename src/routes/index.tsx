@@ -239,11 +239,7 @@ function Index() {
       }
     } catch (err) {
       console.error("Stripe checkout failed:", err);
-      // Nouzový fallback pro vývoj/chyby — pokud selže backend, odemkne se report zdarma
-      setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-      updateHistoryEntry(analysis.reportId, { unlocked: true });
-      setPhase("report");
-      window.scrollTo({ top: 0 });
+      setAnalyzeError("Payment unavailable. Please try again.");
     }
   };
 
