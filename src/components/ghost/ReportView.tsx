@@ -29,6 +29,29 @@ export function ReportView({
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState<string>("verdict");
+
+  useEffect(() => {
+    const ids = ["section-verdict", "section-issues", "section-negotiation", "section-recalls"];
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (!els.length) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id.replace("section-", ""));
+      },
+      { rootMargin: "-30% 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(`section-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     const onScroll = () => {
