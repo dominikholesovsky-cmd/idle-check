@@ -427,7 +427,7 @@ export function ReportView({
         )}
 
         {/* Checklist + Budget sidebar */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
