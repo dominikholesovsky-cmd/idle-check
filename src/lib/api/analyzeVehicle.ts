@@ -30,6 +30,14 @@ function sanitizeInput(text: string): string {
     .trim();
 }
 
+function extractJson(text: string): string {
+  const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) return cleaned;
+  return cleaned.slice(start, end + 1);
+}
+
 export const analyzeVehicle = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
   .handler(async ({ data }) => {
@@ -47,17 +55,20 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     }
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
 
-    const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this car listing and return a JSON object with potential issues.
+    const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this listing and return accurate repair cost data with real current US market part prices.
 
-Vehicle: ${year} ${make} ${model}${engineType ? ` (${engineType})` : ""}
+Vehicle: ${vehicleStr}
 Mileage: ${mileage ? `${mileage.toLocaleString()} miles` : "unknown"}
 Asking price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
 
 Listing text:
 ${sanitizeInput(listingText)}
 
-Return ONLY valid JSON, no markdown, no explanation:
+STEP 1: Use web_search to search RockAuto.com for common replacement parts for this specific vehicle. Search queries like "RockAuto ${vehicleStr} [part name]" for the top known failure parts. Find real part numbers and prices.
+
+STEP 2: Return ONLY valid JSON, no markdown, no explanation:
 {
   "issues": [
     {
@@ -65,47 +76,110 @@ Return ONLY valid JSON, no markdown, no explanation:
       "label": "Short issue title (max 6 words)",
       "category": "Engine & Drivetrain" | "Chassis & Suspension" | "Body & Electrical",
       "severity": "HIGH" | "MED" | "LOW",
-      "costMin": number (USD, total minimum),
-      "costMax": number (USD, total maximum),
-      "partsCostMin": number (USD),
-      "partsCostMax": number (USD),
-      "labourHours": number (decimal, e.g. 2.5),
-      "explanation": "2-3 sentences explaining the issue, why it matters for this specific model, and what to check during inspection",
-      "urgency": "Immediate" | "Soon" | "Monitor"
+      "costMin": number,
+      "costMax": number,
+      "partsCostMin": number,
+      "partsCostMax": number,
+      "labourHours": number,
+      "explanation": "2-3 sentences. Mention specific part price found (e.g. 'Water pump ~$85 on RockAuto, part #AW4078').",
+      "urgency": "Immediate" | "Soon" | "Monitor",
+      "parts": [
+        {
+          "name": "Exact part name",
+          "partNumber": "part number or null",
+          "priceUsd": 49.99,
+          "source": "RockAuto" | "eBay Motors" | "OEM Dealer" | "Estimated",
+          "url": "direct URL to part or null"
+        }
+      ]
     }
   ],
-  "sellerRedFlags": ["string", "string"],
+  "sellerRedFlags": ["string"],
   "marketValueNote": "One sentence about price vs market value"
 }
 
 Rules:
-- Return 5-10 issues specific to ${year} ${make} ${model}
-- Focus on known model-specific problems (e.g. timing chain, rust spots, common failures)
-- costMin/costMax = parts + labour combined
-- partsCostMin/partsCostMax = parts only
+- Return 6-10 issues specific to ${vehicleStr}
+- Focus on known model-specific problems
+- For EACH issue include 1-2 parts with real prices from web search
+- partsCostMin/partsCostMax must reflect actual found prices
+- costMin/costMax = partsCostMin/partsCostMax + (labourHours * 120)
 - labourHours = realistic shop hours
-- HIGH severity = safety issue or $500+ repair
-- MED severity = $150-500 or affects reliability  
-- LOW severity = cosmetic or under $150`;
+- HIGH = safety issue or $500+ total
+- MED = $150-500 or affects reliability
+- LOW = cosmetic or under $150
+- If part number not found after search, set partNumber to null
+- If URL not found, set url to null
+- Always prefer RockAuto prices over estimates`;
 
     try {
-      const message = await client.messages.create({
+      // První volání s web search
+      const firstResponse = await client.messages.create({
         model: "claude-sonnet-4-5",
-        max_tokens: 2000,
+        max_tokens: 4000,
+        tools: [
+          {
+            type: "web_search_20250305" as any,
+            name: "web_search",
+          },
+        ],
         messages: [{ role: "user", content: prompt }],
       });
 
-      const responseText =
-        message.content[0].type === "text" ? message.content[0].text : "";
+      // Zjisti jestli Claude použil web search nebo rovnou vrátil JSON
+      const hasToolUse = firstResponse.content.some(
+        (block) => block.type === "tool_use" || block.type === "tool_result"
+      );
+      const firstTextBlock = firstResponse.content.find(
+        (block) => block.type === "text"
+      );
 
-      const cleaned = responseText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
+      let responseText = "";
 
-      const parsed = JSON.parse(cleaned);
+      if (firstTextBlock && firstTextBlock.type === "text") {
+        responseText = firstTextBlock.text;
+      }
 
-      const issues: Issue[] = (parsed.issues ?? []).map((item: Issue) => ({
+      // Pokud web search proběhl ale JSON ještě není, pokračuj v konverzaci
+      if (
+        hasToolUse &&
+        (!responseText || !responseText.includes('"issues"'))
+      ) {
+        const followUp = await client.messages.create({
+          model: "claude-sonnet-4-5",
+          max_tokens: 4000,
+          tools: [
+            {
+              type: "web_search_20250305" as any,
+              name: "web_search",
+            },
+          ],
+          messages: [
+            { role: "user", content: prompt },
+            { role: "assistant", content: firstResponse.content },
+            {
+              role: "user",
+              content:
+                "Now return the complete JSON analysis based on the real prices you found. Return ONLY the JSON object, nothing else.",
+            },
+          ],
+        });
+
+        for (const block of followUp.content) {
+          if (block.type === "text") {
+            responseText = block.text;
+            break;
+          }
+        }
+      }
+
+      if (!responseText) {
+        throw new Error("No text response from Claude");
+      }
+
+      const parsed = JSON.parse(extractJson(responseText));
+
+      const issues: Issue[] = (parsed.issues ?? []).map((item: any) => ({
         id: String(item.id),
         label: String(item.label),
         category: item.category as Category,
@@ -117,6 +191,15 @@ Rules:
         labourHours: Number(item.labourHours) || 0,
         explanation: String(item.explanation),
         urgency: item.urgency as Urgency,
+        parts: Array.isArray(item.parts)
+          ? item.parts.map((p: any) => ({
+              name: String(p.name ?? ""),
+              partNumber: p.partNumber ? String(p.partNumber) : undefined,
+              priceUsd: p.priceUsd ? Number(p.priceUsd) : undefined,
+              source: p.source ?? "Estimated",
+              url: p.url ? String(p.url) : undefined,
+            }))
+          : [],
       }));
 
       return {
@@ -126,6 +209,10 @@ Rules:
       };
     } catch (err) {
       console.error("Claude API error:", err);
-      return { issues: [] as Issue[], sellerRedFlags: [] as string[], marketValueNote: "" };
+      return {
+        issues: [] as Issue[],
+        sellerRedFlags: [] as string[],
+        marketValueNote: "",
+      };
     }
   });
