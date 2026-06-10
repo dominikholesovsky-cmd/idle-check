@@ -21,11 +21,14 @@ export function PaymentLoadingView({
   const [current, setCurrent] = useState("");
   const [lineIdx, setLineIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
-  const [done, setDone] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
 
   useEffect(() => {
-    if (done) return;
-    if (lineIdx >= UNLOCK_LINES.length) { setDone(true); return; }
+    if (animDone) return;
+    if (lineIdx >= UNLOCK_LINES.length) {
+      setAnimDone(true);
+      return;
+    }
     const line = UNLOCK_LINES[lineIdx];
     if (charIdx <= line.length) {
       const t = setTimeout(() => {
@@ -42,16 +45,17 @@ export function PaymentLoadingView({
       setLineIdx((i) => i + 1);
     }, delay);
     return () => clearTimeout(t);
-  }, [lineIdx, charIdx, done]);
+  }, [lineIdx, charIdx, animDone]);
 
-  // Počkej na Claude i animaci
+  // Spusť onDone jakmile jsou hotové OBĚ podmínky
   useEffect(() => {
-    if (!done || !claudeReady) return;
-    const t = setTimeout(onDone, 400);
-    return () => clearTimeout(t);
-  }, [done, claudeReady]);
+    if (animDone && claudeReady) {
+      const t = setTimeout(onDone, 400);
+      return () => clearTimeout(t);
+    }
+  }, [animDone, claudeReady, onDone]);
 
-  const waiting = done && !claudeReady;
+  const waiting = animDone && !claudeReady;
   const isFinalLine = (s: string) => s === "Report unlocked.";
 
   return (
@@ -76,7 +80,7 @@ export function PaymentLoadingView({
               </span>
             </div>
           ))}
-          {!done && (
+          {!animDone && (
             <div className="flex gap-2">
               <span className="text-green-500">$</span>
               <span className="text-green-400">

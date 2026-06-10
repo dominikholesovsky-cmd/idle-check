@@ -2,14 +2,9 @@ import { useEffect, useState } from "react";
 
 const SCAN_LINES = [
   "Reading listing text...",
-  "Extracting vehicle identity — make, model, year, trim...",
-  "Scanning seller language for evasive patterns...",
-  "Pulling NHTSA recall records for this model year...",
-  "Matching against known failure patterns for this platform...",
-  "Searching RockAuto & eBay Motors for real part prices...",
-  "Cross-referencing repair costs against US labor rates...",
-  "Estimating negotiation leverage...",
-  "Drafting your negotiation opening...",
+  "Pulling NHTSA recall records...",
+  "Matching known failure patterns...",
+  "Estimating repair costs...",
   "Report ready.",
 ];
 
