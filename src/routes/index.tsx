@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/ghost/Navbar";
 import { Footer } from "@/components/ghost/Footer";
@@ -102,9 +102,26 @@ function Index() {
   const [history, setHistory] = useState<AnalysisState[]>([]);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
+  // Synchronizace: obě podmínky musí být splněny před přechodem na preview
+  const [apiReady, setApiReady] = useState(false);
+  const [animationReady, setAnimationReady] = useState(false);
+  const pendingEntryRef = useRef<AnalysisState | null>(null);
+
   useEffect(() => { setHistory(loadHistory()); }, []);
 
-  // Handle Stripe redirect — show unlocking animation instead of jumping straight to report
+  // Přejdi na preview až když jsou hotové obě — API i animace
+  useEffect(() => {
+    if (apiReady && animationReady && pendingEntryRef.current) {
+      const entry = pendingEntryRef.current;
+      pendingEntryRef.current = null;
+      setAnalysis(entry);
+      saveToHistory(entry);
+      setHistory(loadHistory());
+      setPhase("preview");
+      window.scrollTo({ top: 0 });
+    }
+  }, [apiReady, animationReady]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -112,7 +129,6 @@ function Index() {
 
     if (sessionId && reportId) {
       window.history.replaceState({}, "", "/");
-
       const hist = loadHistory();
       const entry = hist.find((e) => e.reportId === reportId);
       if (entry) {
@@ -127,6 +143,9 @@ function Index() {
 
   const handleAnalyze = async (data: LandingSubmit) => {
     setAnalyzeError(null);
+    setApiReady(false);
+    setAnimationReady(false);
+    pendingEntryRef.current = null;
 
     const vehicle = parseVehicle({
       text: data.manualText, make: data.make, model: data.model,
@@ -186,7 +205,7 @@ function Index() {
 
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
-      const entry: AnalysisState = {
+      pendingEntryRef.current = {
         vehicle, marketplace, askingPrice: data.askingPrice,
         issues, recalls, recommendation,
         timestamp: Date.now(),
@@ -197,9 +216,7 @@ function Index() {
         recallSource,
       };
 
-      setAnalysis(entry);
-      saveToHistory(entry);
-      setHistory(loadHistory());
+      setApiReady(true);
 
     } catch (err) {
       console.error("Analysis failed:", err);
@@ -207,7 +224,7 @@ function Index() {
       const recalls = generateRecalls(vehicle);
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
-      const entry: AnalysisState = {
+      pendingEntryRef.current = {
         vehicle, marketplace, askingPrice: data.askingPrice,
         issues, recalls, recommendation,
         timestamp: Date.now(),
@@ -216,17 +233,13 @@ function Index() {
         recallSource: "procedural",
       };
 
-      setAnalysis(entry);
-      saveToHistory(entry);
-      setHistory(loadHistory());
+      setApiReady(true);
     }
   };
 
   const handleUnlock = async () => {
     if (!analysis) return;
-
     const vehicleLabel = `${analysis.vehicle.year ?? ""} ${analysis.vehicle.make} ${analysis.vehicle.model}`.trim();
-
     try {
       const result = await createCheckoutSession({
         data: {
@@ -236,7 +249,6 @@ function Index() {
           cancelUrl: window.location.origin,
         },
       });
-
       if (result?.sessionUrl) {
         window.location.href = result.sessionUrl;
       }
@@ -250,6 +262,9 @@ function Index() {
     setPhase("landing");
     setAnalysis(null);
     setAnalyzeError(null);
+    setApiReady(false);
+    setAnimationReady(false);
+    pendingEntryRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -278,10 +293,8 @@ function Index() {
 
         {phase === "scanning" && (
           <ScanningView
-            onDone={() => {
-              setPhase("preview");
-              window.scrollTo({ top: 0 });
-            }}
+            onDone={() => setAnimationReady(true)}
+            apiReady={apiReady}
           />
         )}
 
