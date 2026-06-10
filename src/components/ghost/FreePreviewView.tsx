@@ -1,4 +1,4 @@
-import { Lock, CreditCard } from "lucide-react";
+import { Lock, CreditCard, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Issue, Vehicle } from "@/lib/ghost/types";
 
@@ -22,10 +22,12 @@ export function FreePreviewView({
   vehicle,
   issues,
   onUnlock,
+  paymentError,
 }: {
   vehicle: Vehicle;
   issues: Issue[];
   onUnlock: () => void;
+  paymentError?: string | null;
 }) {
   const free = issues.slice(0, 3);
   const lockedCount = Math.max(0, issues.length - free.length);
@@ -95,6 +97,14 @@ export function FreePreviewView({
           </span>
         </div>
       </div>
+
+      {/* Payment error banner */}
+      {paymentError && (
+        <div className="mt-6 flex items-center gap-3 rounded-xl border border-red-800/40 bg-red-950/40 px-4 py-3 text-[13px] text-red-300">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+          {paymentError}
+        </div>
+      )}
 
       {/* Unlock card */}
       <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-8">
