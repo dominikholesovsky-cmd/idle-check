@@ -281,9 +281,16 @@ export function ReportView({
     doc.save(fname);
   };
 
+  const navItems = [
+    { id: "verdict", label: "Verdict" },
+    { id: "issues", label: "Issues" },
+    { id: "negotiation", label: "Negotiation" },
+    { id: "recalls", label: "Recalls" },
+  ];
+
   return (
     <>
-      {/* Fixed scroll progress bar */}
+      {/* Fixed scroll progress bar (top) */}
       <div
         className="fixed left-0 right-0 top-0 z-50 h-[3px] bg-transparent"
         aria-hidden
@@ -294,6 +301,41 @@ export function ReportView({
         />
       </div>
 
+      {/* Fixed left sidebar (desktop only) */}
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-border bg-card lg:block">
+        {/* Vertical progress bar on left edge */}
+        <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
+          <div
+            className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
+            style={{ height: `${scrollProgress * 100}%` }}
+          />
+        </div>
+        <div className="flex h-full flex-col px-5 py-6">
+          <div className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-primary">
+            IDLE CHECK
+          </div>
+          <nav className="mt-10 flex flex-col gap-1">
+            {navItems.map((item) => {
+              const active = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                    active
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      <div className="lg:pl-[200px]">
       <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
         {/* Status bar */}
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
