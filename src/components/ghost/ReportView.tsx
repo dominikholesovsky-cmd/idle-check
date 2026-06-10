@@ -124,10 +124,10 @@ export function ReportView({
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const BG = "#0f0f0f";
+    const BG = "#ffffff";
     const ACCENT = "#b22222";
-    const WHITE = "#ffffff";
-    const MUTED = "#9ca3af";
+    const WHITE = "#111111";
+    const MUTED = "#6b7280";
 
     const paintBg = () => {
       doc.setFillColor(BG);
