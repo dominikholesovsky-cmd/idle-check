@@ -389,7 +389,9 @@ export function ReportView({
         </div>
 
         {/* Verdict */}
-        <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+        <div id="section-verdict">
+          <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+        </div>
 
         {/* Market value */}
         {hasMarketNote && (
