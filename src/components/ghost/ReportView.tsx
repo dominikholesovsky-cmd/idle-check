@@ -126,7 +126,7 @@ export function ReportView({
     const pageH = doc.internal.pageSize.getHeight();
     const BG = "#ffffff";
     const ACCENT = "#b22222";
-    const WHITE = "#111111";
+    const TEXT = "#111111";
     const MUTED = "#6b7280";
 
     const paintBg = () => {
@@ -147,7 +147,7 @@ export function ReportView({
 
     doc.setTextColor(MUTED);
     doc.setFontSize(10);
-    const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    const dateStr = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     doc.text(`${dateStr}${mileageStr ? ` · ${mileageStr}` : ""} · Asked on ${marketplace || "Unknown"} · $${displayPrice.toLocaleString()}`, 40, 102);
 
     doc.setDrawColor(ACCENT);
@@ -174,7 +174,7 @@ export function ReportView({
     y += summaryLines.length * 13 + 14;
 
     const tableTheme = {
-      headStyles: { fillColor: ACCENT, textColor: WHITE, fontStyle: "bold" as const },
+      headStyles: { fillColor: ACCENT, textColor: "#ffffff", fontStyle: "bold" as const },
       bodyStyles: { fillColor: "#f9f9f9", textColor: "#111111" },
       alternateRowStyles: { fillColor: "#f3f3f3" },
       styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#e5e5e5", lineWidth: 0.3 },
