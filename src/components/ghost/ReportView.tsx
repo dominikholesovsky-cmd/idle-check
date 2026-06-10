@@ -485,6 +485,8 @@ export function ReportView({
           )}
         </div>
       </section>
+      </div>
     </>
+
   );
 }
