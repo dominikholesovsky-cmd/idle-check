@@ -13,12 +13,15 @@ function parseNhtsaDate(raw: any): string {
   if (!raw) return "Unknown";
   const str = String(raw);
   if (/^\d{8}$/.test(str)) {
-    return `${str.slice(4, 6)}/${str.slice(6, 8)}/${str.slice(0, 4)}`;
+    const month = str.slice(4, 6);
+    const day = str.slice(6, 8);
+    const year = str.slice(0, 4);
+    return `${month}/${day}/${year}`;
   }
   const d = new Date(str);
   return isNaN(d.getTime())
     ? str
-    : d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    : d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 
 export const fetchRecalls = createServerFn({ method: "POST" })
