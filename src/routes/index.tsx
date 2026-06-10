@@ -287,6 +287,7 @@ function Index() {
             vehicle={analysis.vehicle}
             issues={analysis.issues}
             onUnlock={handleUnlock}
+            paymentError={analyzeError}
           />
         )}
 
