@@ -471,7 +471,7 @@ export function ReportView({
         </div>
 
         {/* Recalls */}
-        <div>
+        <div id="section-recalls">
           <div className="mb-3 flex items-center gap-2">
             <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
             <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
