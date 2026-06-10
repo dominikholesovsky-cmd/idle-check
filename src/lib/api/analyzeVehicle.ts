@@ -55,7 +55,10 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
       return { issues: [] as Issue[], sellerRedFlags: [] as string[], marketValueNote: "" };
     }
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      timeout: 30000,
+    });
     const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
 
     const prompt = `You are an expert used car inspector specializing in JDM and performance vehicles. Analyze this listing and return a JSON inspection report.
