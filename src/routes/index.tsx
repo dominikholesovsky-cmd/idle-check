@@ -107,6 +107,7 @@ function Index() {
   const [claudeReady, setClaudeReady] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const upgradedEntryRef = useRef<AnalysisState | null>(null);
+  const hasCalledClaudeRef = useRef(false);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -140,6 +141,8 @@ function Index() {
     const reportId = params.get("report_id");
 
     if (!sessionId || !reportId) return;
+    if (hasCalledClaudeRef.current) return;
+    hasCalledClaudeRef.current = true;
 
     window.history.replaceState({}, "", "/");
     const hist = loadHistory();
