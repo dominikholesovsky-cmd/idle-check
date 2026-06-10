@@ -1,7 +1,7 @@
 {
   "regions": ["iad1"],
   "functions": {
-    "**/__server.func/**": {
+    "_ssr/**": {
       "maxDuration": 60
     }
   }
