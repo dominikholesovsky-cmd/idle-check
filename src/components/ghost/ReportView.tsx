@@ -460,7 +460,7 @@ export function ReportView({
         </div>
 
         {/* Negotiation */}
-        <div className="mx-auto w-full max-w-3xl">
+        <div id="section-negotiation" className="mx-auto w-full max-w-3xl">
           <NegotiationScript
             vehicle={vehicle}
             askingPrice={displayPrice}
