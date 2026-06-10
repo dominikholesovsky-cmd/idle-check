@@ -70,17 +70,34 @@ Mileage: ${mileage ? `${mileage.toLocaleString()} mi` : "unknown"}
 Price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
 ${hasListing ? `\nListing (check for red flags and mentioned issues):\n"""${sanitizeInput(listingText)}"""` : ""}
 
-JSON format:
-{"issues":[{"id":"str","label":"max 6 words","category":"Engine & Drivetrain"|"Chassis & Suspension"|"Body & Electrical","severity":"HIGH"|"MED"|"LOW","costMin":0,"costMax":0,"partsCostMin":0,"partsCostMax":0,"labourHours":0,"explanation":"2 sentences. Mention if listing hints at this.","urgency":"Immediate"|"Soon"|"Monitor"}],"sellerRedFlags":["specific red flags from listing or []"],"marketValueNote":"one sentence"}
+Return this exact JSON:
+{
+  "issues": [{
+    "id": "snake_case",
+    "label": "max 6 words",
+    "category": "Engine & Drivetrain"|"Chassis & Suspension"|"Body & Electrical",
+    "severity": "HIGH"|"MED"|"LOW",
+    "costMin": number,
+    "costMax": number,
+    "partsCostMin": number,
+    "partsCostMax": number,
+    "labourHours": number,
+    "explanation": "2 sentences. Mention listing hints if relevant.",
+    "urgency": "Immediate"|"Soon"|"Monitor",
+    "parts": [{"name": "part name", "partNumber": "OEM# or null", "priceUsd": number, "source": "RockAuto"|"OEM Dealer"|"Estimated", "url": null}]
+  }],
+  "sellerRedFlags": ["red flags from listing or empty array"],
+  "marketValueNote": "one sentence"
+}
 
-Rules: 5 issues max. Model-specific problems. costMin=partsCostMin+(labourHours*120). HIGH=$500+. MED=$150-500. LOW=under $150.${hasListing ? " Prioritize issues hinted in listing." : ""}`;
+Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120). HIGH=$500+. MED=$150-500. LOW=under $150.${hasListing ? " Prioritize issues hinted in listing." : ""}`;
 
     try {
       console.log("analyzeVehicle: calling Claude for", vehicleStr);
 
       const message = await client.messages.create({
         model: "claude-haiku-4-5",
-        max_tokens: 1200,
+        max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       });
 
@@ -103,7 +120,15 @@ Rules: 5 issues max. Model-specific problems. costMin=partsCostMin+(labourHours*
         labourHours: Number(item.labourHours) || 0,
         explanation: String(item.explanation),
         urgency: item.urgency as Urgency,
-        parts: [],
+        parts: Array.isArray(item.parts)
+          ? item.parts.map((p: any) => ({
+              name: String(p.name ?? ""),
+              partNumber: p.partNumber ? String(p.partNumber) : undefined,
+              priceUsd: p.priceUsd ? Number(p.priceUsd) : undefined,
+              source: p.source ?? "Estimated",
+              url: p.url ? String(p.url) : undefined,
+            }))
+          : [],
       }));
 
       console.log("analyzeVehicle: success, issues:", issues.length);

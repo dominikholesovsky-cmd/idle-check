@@ -55,16 +55,9 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!entry || !entry.vehicle) return null;
   if (!entry.recommendation || !entry.recommendation.verdict) {
     try {
-      entry.recommendation = generateRecommendation(
-        entry.vehicle, entry.issues || [], entry.askingPrice || 0
-      );
+      entry.recommendation = generateRecommendation(entry.vehicle, entry.issues || [], entry.askingPrice || 0);
     } catch {
-      entry.recommendation = {
-        verdict: "negotiate",
-        headline: "Review Needed",
-        summary: "Please regenerate this report.",
-        roadmap: [],
-      };
+      entry.recommendation = { verdict: "negotiate", headline: "Review Needed", summary: "Please regenerate this report.", roadmap: [] };
     }
   }
   if (!Array.isArray(entry.issues)) entry.issues = [];
@@ -86,33 +79,25 @@ function loadHistory(): AnalysisState[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map(validateAndMigrateEntry)
-      .filter((e): e is AnalysisState => e !== null);
+    return parsed.map(validateAndMigrateEntry).filter((e): e is AnalysisState => e !== null);
   } catch { return []; }
 }
 
 function saveToHistory(entry: AnalysisState) {
   try {
     const prev = loadHistory();
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([entry, ...prev].slice(0, 10))
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...prev].slice(0, 10)));
   } catch {}
 }
 
 function updateHistoryEntry(reportId: string, updates: Partial<AnalysisState>) {
   try {
     const prev = loadHistory();
-    const updated = prev.map((e) =>
-      e.reportId === reportId ? { ...e, ...updates } : e
-    );
+    const updated = prev.map((e) => e.reportId === reportId ? { ...e, ...updates } : e);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {}
 }
 
-// Resolved promise — použijeme jako placeholder před nastavením skutečného
 const RESOLVED_PROMISE = Promise.resolve();
 
 function Index() {
@@ -147,7 +132,6 @@ function Index() {
 
     if (!sessionId || !reportId) return;
 
-    // Zabránění dvojímu volání
     const callKey = `claude-called-${reportId}`;
     if (sessionStorage.getItem(callKey)) {
       console.log("Already called for this reportId, skipping");
@@ -169,7 +153,6 @@ function Index() {
     setPhase("unlocking");
     window.scrollTo({ top: 0 });
 
-    // Vytvoř Promise který se resolvuje až Claude skončí
     const promise = analyzeVehicle({
       data: {
         listingText: entry.listingText ?? "",
@@ -184,12 +167,19 @@ function Index() {
       .then((aiResult) => {
         console.log("Claude done, issues:", aiResult.issues.length);
         if (aiResult.issues.length > 0) {
+          // Přegeneruj recommendation z nových AI issues — opravuje prázdnou roadmapu
+          const newRecommendation = generateRecommendation(
+            entry.vehicle,
+            aiResult.issues,
+            entry.askingPrice
+          );
           const upgraded: AnalysisState = {
             ...entry,
             unlocked: true,
             issues: aiResult.issues,
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
+            recommendation: newRecommendation,
           };
           setAnalysis(upgraded);
           updateHistoryEntry(reportId, {
@@ -197,6 +187,7 @@ function Index() {
             issues: aiResult.issues,
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
+            recommendation: newRecommendation,
           });
         } else {
           console.log("0 issues from Claude, keeping procedural");
@@ -217,13 +208,9 @@ function Index() {
     pendingEntryRef.current = null;
 
     const vehicle = parseVehicle({
-      text: data.manualText,
-      make: data.make,
-      model: data.model,
-      year: data.year,
-      engineType: data.engineType,
-      mileage: data.mileage,
-      vin: data.vin,
+      text: data.manualText, make: data.make, model: data.model,
+      year: data.year, engineType: data.engineType,
+      mileage: data.mileage, vin: data.vin,
     });
     const marketplace = detectMarketplace(data.manualText);
     const reportId = generateReportId();
