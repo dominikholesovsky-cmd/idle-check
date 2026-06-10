@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const UNLOCK_LINES = [
   "Verifying payment with Stripe...",
@@ -12,23 +12,37 @@ const UNLOCK_LINES = [
 
 export function PaymentLoadingView({
   onDone,
-  claudeReady,
+  claudePromise,
 }: {
   onDone: () => void;
-  claudeReady: boolean;
+  claudePromise: Promise<void>;
 }) {
   const [visible, setVisible] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const [lineIdx, setLineIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [animDone, setAnimDone] = useState(false);
+  const [claudeDone, setClaudeDone] = useState(false);
+  const firedRef = useRef(false);
+  const onDoneRef = useRef(onDone);
 
+  useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
+
+  // Poslouchej na Claude Promise
+  useEffect(() => {
+    claudePromise.then(() => {
+      console.log("claudePromise resolved");
+      setClaudeDone(true);
+    }).catch(() => {
+      console.log("claudePromise rejected — using procedural");
+      setClaudeDone(true);
+    });
+  }, [claudePromise]);
+
+  // Typewriter animace
   useEffect(() => {
     if (animDone) return;
-    if (lineIdx >= UNLOCK_LINES.length) {
-      setAnimDone(true);
-      return;
-    }
+    if (lineIdx >= UNLOCK_LINES.length) { setAnimDone(true); return; }
     const line = UNLOCK_LINES[lineIdx];
     if (charIdx <= line.length) {
       const t = setTimeout(() => {
@@ -47,15 +61,17 @@ export function PaymentLoadingView({
     return () => clearTimeout(t);
   }, [lineIdx, charIdx, animDone]);
 
-  // Spusť onDone jakmile jsou hotové OBĚ podmínky
+  // Přejdi na report až jsou hotové obě podmínky
   useEffect(() => {
-    if (animDone && claudeReady) {
-      const t = setTimeout(onDone, 400);
+    if (animDone && claudeDone && !firedRef.current) {
+      firedRef.current = true;
+      console.log("Both done — calling onDone");
+      const t = setTimeout(() => onDoneRef.current(), 400);
       return () => clearTimeout(t);
     }
-  }, [animDone, claudeReady, onDone]);
+  }, [animDone, claudeDone]);
 
-  const waiting = animDone && !claudeReady;
+  const waiting = animDone && !claudeDone;
   const isFinalLine = (s: string) => s === "Report unlocked.";
 
   return (

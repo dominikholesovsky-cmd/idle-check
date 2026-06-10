@@ -55,9 +55,16 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!entry || !entry.vehicle) return null;
   if (!entry.recommendation || !entry.recommendation.verdict) {
     try {
-      entry.recommendation = generateRecommendation(entry.vehicle, entry.issues || [], entry.askingPrice || 0);
+      entry.recommendation = generateRecommendation(
+        entry.vehicle, entry.issues || [], entry.askingPrice || 0
+      );
     } catch {
-      entry.recommendation = { verdict: "negotiate", headline: "Review Needed", summary: "Please regenerate this report.", roadmap: [] };
+      entry.recommendation = {
+        verdict: "negotiate",
+        headline: "Review Needed",
+        summary: "Please regenerate this report.",
+        roadmap: [],
+      };
     }
   }
   if (!Array.isArray(entry.issues)) entry.issues = [];
@@ -79,24 +86,34 @@ function loadHistory(): AnalysisState[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(validateAndMigrateEntry).filter((e): e is AnalysisState => e !== null);
+    return parsed
+      .map(validateAndMigrateEntry)
+      .filter((e): e is AnalysisState => e !== null);
   } catch { return []; }
 }
 
 function saveToHistory(entry: AnalysisState) {
   try {
     const prev = loadHistory();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...prev].slice(0, 10)));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([entry, ...prev].slice(0, 10))
+    );
   } catch {}
 }
 
 function updateHistoryEntry(reportId: string, updates: Partial<AnalysisState>) {
   try {
     const prev = loadHistory();
-    const updated = prev.map((e) => e.reportId === reportId ? { ...e, ...updates } : e);
+    const updated = prev.map((e) =>
+      e.reportId === reportId ? { ...e, ...updates } : e
+    );
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {}
 }
+
+// Resolved promise — použijeme jako placeholder před nastavením skutečného
+const RESOLVED_PROMISE = Promise.resolve();
 
 function Index() {
   const [phase, setPhase] = useState<Phase>("landing");
@@ -104,9 +121,8 @@ function Index() {
   const [history, setHistory] = useState<AnalysisState[]>([]);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [animationReady, setAnimationReady] = useState(false);
-  const [claudeReady, setClaudeReady] = useState(false);
+  const [claudePromise, setClaudePromise] = useState<Promise<void>>(RESOLVED_PROMISE);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
-  const upgradedEntryRef = useRef<AnalysisState | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -123,19 +139,7 @@ function Index() {
     }
   }, [animationReady]);
 
-  // Unlocking → předej AI data jakmile Claude skončí
-  useEffect(() => {
-    console.log("claudeReady effect:", claudeReady, "phase:", phase, "upgradedEntryRef:", !!upgradedEntryRef.current);
-    if (claudeReady && phase === "unlocking" && upgradedEntryRef.current) {
-      console.log("Transitioning to report with AI data");
-      const entry = upgradedEntryRef.current;
-      upgradedEntryRef.current = null;
-      setClaudeReady(false);
-      setAnalysis(entry);
-    }
-  }, [claudeReady, phase]);
-
-  // Po Stripe redirectu — zavolej Claude API jednou
+  // Po Stripe redirectu — zavolej Claude API
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -143,9 +147,10 @@ function Index() {
 
     if (!sessionId || !reportId) return;
 
+    // Zabránění dvojímu volání
     const callKey = `claude-called-${reportId}`;
     if (sessionStorage.getItem(callKey)) {
-      console.log("Claude already called for this reportId, skipping");
+      console.log("Already called for this reportId, skipping");
       return;
     }
     sessionStorage.setItem(callKey, "1");
@@ -154,17 +159,18 @@ function Index() {
     const hist = loadHistory();
     const entry = hist.find((e) => e.reportId === reportId);
     if (!entry) {
-      console.error("Entry not found in history for reportId:", reportId);
+      console.error("Entry not found:", reportId);
       return;
     }
 
-    console.log("Starting Claude analysis for reportId:", reportId);
+    console.log("Starting Claude for reportId:", reportId);
     updateHistoryEntry(reportId, { unlocked: true });
     setAnalysis({ ...entry, unlocked: true });
     setPhase("unlocking");
     window.scrollTo({ top: 0 });
 
-    analyzeVehicle({
+    // Vytvoř Promise který se resolvuje až Claude skončí
+    const promise = analyzeVehicle({
       data: {
         listingText: entry.listingText ?? "",
         make: entry.vehicle.make,
@@ -176,7 +182,7 @@ function Index() {
       },
     })
       .then((aiResult) => {
-        console.log("Claude finished, issues:", aiResult.issues.length);
+        console.log("Claude done, issues:", aiResult.issues.length);
         if (aiResult.issues.length > 0) {
           const upgraded: AnalysisState = {
             ...entry,
@@ -185,26 +191,24 @@ function Index() {
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
           };
-          upgradedEntryRef.current = upgraded;
+          setAnalysis(upgraded);
           updateHistoryEntry(reportId, {
             unlocked: true,
             issues: aiResult.issues,
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
           });
-          console.log("upgradedEntryRef set with AI data");
         } else {
-          console.log("Claude returned 0 issues, using procedural data");
-          upgradedEntryRef.current = { ...entry, unlocked: true };
+          console.log("0 issues from Claude, keeping procedural");
+          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
         }
-        console.log("Calling setClaudeReady(true)");
-        setClaudeReady(true);
       })
       .catch((err) => {
-        console.error("Claude failed:", err);
-        upgradedEntryRef.current = { ...entry, unlocked: true };
-        setClaudeReady(true);
+        console.error("Claude error:", err);
+        setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
       });
+
+    setClaudePromise(promise);
   }, []);
 
   const handleAnalyze = async (data: LandingSubmit) => {
@@ -213,9 +217,13 @@ function Index() {
     pendingEntryRef.current = null;
 
     const vehicle = parseVehicle({
-      text: data.manualText, make: data.make, model: data.model,
-      year: data.year, engineType: data.engineType,
-      mileage: data.mileage, vin: data.vin,
+      text: data.manualText,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      engineType: data.engineType,
+      mileage: data.mileage,
+      vin: data.vin,
     });
     const marketplace = detectMarketplace(data.manualText);
     const reportId = generateReportId();
@@ -298,9 +306,8 @@ function Index() {
     setAnalysis(null);
     setAnalyzeError(null);
     setAnimationReady(false);
-    setClaudeReady(false);
+    setClaudePromise(RESOLVED_PROMISE);
     pendingEntryRef.current = null;
-    upgradedEntryRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -349,7 +356,7 @@ function Index() {
               setPhase("report");
               window.scrollTo({ top: 0 });
             }}
-            claudeReady={claudeReady}
+            claudePromise={claudePromise}
           />
         )}
 
