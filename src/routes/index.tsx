@@ -6,6 +6,7 @@ import { LandingView, type LandingSubmit } from "@/components/ghost/LandingView"
 import { ScanningView } from "@/components/ghost/ScanningView";
 import { FreePreviewView } from "@/components/ghost/FreePreviewView";
 import { ReportView } from "@/components/ghost/ReportView";
+import { PaymentLoadingView } from "@/components/ghost/PaymentLoadingView";
 import { analyzeVehicle } from "@/lib/api/analyzeVehicle";
 import { fetchRecalls } from "@/lib/api/fetchRecalls";
 import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Phase = "landing" | "scanning" | "preview" | "report";
+type Phase = "landing" | "scanning" | "preview" | "unlocking" | "report";
 
 export interface AnalysisState {
   vehicle: Vehicle;
@@ -61,6 +62,12 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!Array.isArray(entry.recalls)) entry.recalls = [];
   if (!entry.reportId) entry.reportId = generateReportId();
   if (entry.unlocked === undefined) entry.unlocked = true;
+  if (Array.isArray(entry.recalls)) {
+    entry.recalls = entry.recalls.map((r: any) => ({
+      ...r,
+      date: r.date === "Invalid Date" ? "Unknown" : r.date,
+    }));
+  }
   return entry as AnalysisState;
 }
 
@@ -93,11 +100,11 @@ function Index() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
   const [history, setHistory] = useState<AnalysisState[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
+  // Handle Stripe redirect — show unlocking animation instead of jumping straight to report
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -112,14 +119,13 @@ function Index() {
         const unlocked = { ...entry, unlocked: true };
         updateHistoryEntry(reportId, { unlocked: true });
         setAnalysis(unlocked);
-        setPhase("report");
-        setHistory(loadHistory());
+        setPhase("unlocking");
+        window.scrollTo({ top: 0 });
       }
     }
   }, []);
 
   const handleAnalyze = async (data: LandingSubmit) => {
-    setIsAnalyzing(true);
     setAnalyzeError(null);
 
     const vehicle = parseVehicle({
@@ -213,8 +219,6 @@ function Index() {
       setAnalysis(entry);
       saveToHistory(entry);
       setHistory(loadHistory());
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -224,7 +228,6 @@ function Index() {
     const vehicleLabel = `${analysis.vehicle.year ?? ""} ${analysis.vehicle.make} ${analysis.vehicle.model}`.trim();
 
     try {
-      // OPRAVA: Data jdou zpět do objektu "data", aby je klientská RPC proxy správně doručila Zodu
       const result = await createCheckoutSession({
         data: {
           vehicleLabel,
@@ -288,6 +291,15 @@ function Index() {
             issues={analysis.issues}
             onUnlock={handleUnlock}
             paymentError={analyzeError}
+          />
+        )}
+
+        {phase === "unlocking" && analysis && (
+          <PaymentLoadingView
+            onDone={() => {
+              setPhase("report");
+              window.scrollTo({ top: 0 });
+            }}
           />
         )}
 
