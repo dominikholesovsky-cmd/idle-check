@@ -41,7 +41,6 @@ export interface AnalysisState {
   sellerRedFlags?: string[];
   marketValueNote?: string;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
-  // Původní listing data pro Claude po platbě
   listingText?: string;
   engineType?: string;
 }
@@ -104,13 +103,11 @@ function Index() {
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
   const [history, setHistory] = useState<AnalysisState[]>([]);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-
   const [animationReady, setAnimationReady] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
-  // Scanning — jen animace, žádné API
   useEffect(() => {
     if (animationReady && pendingEntryRef.current) {
       const entry = pendingEntryRef.current;
@@ -123,58 +120,61 @@ function Index() {
     }
   }, [animationReady]);
 
-  // Po Stripe redirectu — zavolej Claude API
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const reportId = params.get("report_id");
 
-    if (sessionId && reportId) {
-      window.history.replaceState({}, "", "/");
-      const hist = loadHistory();
-      const entry = hist.find((e) => e.reportId === reportId);
-      if (entry) {
-        updateHistoryEntry(reportId, { unlocked: true });
-        setAnalysis({ ...entry, unlocked: true });
-        setPhase("unlocking");
-        window.scrollTo({ top: 0 });
+    if (!sessionId || !reportId) return;
 
-        // Zavolej Claude API teď — uživatel zaplatil
-        analyzeVehicle({
-          data: {
-            listingText: entry.listingText ?? "",
-            make: entry.vehicle.make,
-            model: entry.vehicle.model,
-            year: entry.vehicle.year,
-            engineType: entry.engineType,
-            mileage: entry.vehicle.mileage,
-            askingPrice: entry.askingPrice,
-          },
-        }).then((aiResult) => {
-          if (aiResult.issues.length > 0) {
-            const upgraded = {
-              ...entry,
-              unlocked: true,
-              issues: aiResult.issues,
-              sellerRedFlags: aiResult.sellerRedFlags,
-              marketValueNote: aiResult.marketValueNote,
-            };
-            setAnalysis(upgraded);
-            updateHistoryEntry(reportId, {
-              unlocked: true,
-              issues: aiResult.issues,
-              sellerRedFlags: aiResult.sellerRedFlags,
-              marketValueNote: aiResult.marketValueNote,
-            });
-          } else {
-            // Claude selhal — použij procedurální data která už máme
-            setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-          }
-        }).catch(() => {
+    window.history.replaceState({}, "", "/");
+    const hist = loadHistory();
+    const entry = hist.find((e) => e.reportId === reportId);
+    if (!entry) return;
+
+    updateHistoryEntry(reportId, { unlocked: true });
+    setAnalysis({ ...entry, unlocked: true });
+    setPhase("unlocking");
+    window.scrollTo({ top: 0 });
+
+    // Claude API se volá až po platbě
+    analyzeVehicle({
+      data: {
+        listingText: entry.listingText ?? "",
+        make: entry.vehicle.make,
+        model: entry.vehicle.model,
+        year: entry.vehicle.year,
+        engineType: entry.engineType,
+        mileage: entry.vehicle.mileage,
+        askingPrice: entry.askingPrice,
+      },
+    })
+      .then((aiResult) => {
+        if (aiResult.issues.length > 0) {
+          // Claude uspěl — nahraď procedurální data AI daty
+          const upgraded: AnalysisState = {
+            ...entry,
+            unlocked: true,
+            issues: aiResult.issues,
+            sellerRedFlags: aiResult.sellerRedFlags,
+            marketValueNote: aiResult.marketValueNote,
+          };
+          setAnalysis(upgraded);
+          updateHistoryEntry(reportId, {
+            unlocked: true,
+            issues: aiResult.issues,
+            sellerRedFlags: aiResult.sellerRedFlags,
+            marketValueNote: aiResult.marketValueNote,
+          });
+        } else {
+          // Claude selhal nebo vrátil prázdno — procedurální data zůstanou
           setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-        });
-      }
-    }
+        }
+      })
+      .catch(() => {
+        // Síťová chyba — procedurální data zůstanou, report se zobrazí
+        setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+      });
   }, []);
 
   const handleAnalyze = async (data: LandingSubmit) => {
@@ -194,7 +194,6 @@ function Index() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     try {
-      // Pouze NHTSA recalls — Claude se nevolá
       const recallResult = await fetchRecalls({
         data: {
           vin: data.vin,
@@ -214,22 +213,14 @@ function Index() {
         recalls = generateRecalls(vehicle);
       }
 
-      // Procedurální issues pro free preview
       const issues = generateIssues(vehicle);
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
       pendingEntryRef.current = {
-        vehicle,
-        marketplace,
-        askingPrice: data.askingPrice,
-        issues,
-        recalls,
-        recommendation,
-        timestamp: Date.now(),
-        reportId,
-        unlocked: false,
-        recallSource,
-        // Uložíme listing data pro Claude po platbě
+        vehicle, marketplace, askingPrice: data.askingPrice,
+        issues, recalls, recommendation,
+        timestamp: Date.now(), reportId,
+        unlocked: false, recallSource,
         listingText: data.manualText,
         engineType: data.engineType,
       };
@@ -241,23 +232,14 @@ function Index() {
       const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
 
       pendingEntryRef.current = {
-        vehicle,
-        marketplace,
-        askingPrice: data.askingPrice,
-        issues,
-        recalls,
-        recommendation,
-        timestamp: Date.now(),
-        reportId,
-        unlocked: false,
-        recallSource: "procedural",
+        vehicle, marketplace, askingPrice: data.askingPrice,
+        issues, recalls, recommendation,
+        timestamp: Date.now(), reportId,
+        unlocked: false, recallSource: "procedural",
         listingText: data.manualText,
         engineType: data.engineType,
       };
     }
-
-    // Scanning animace teď řídí přechod — setApiReady nahrazeno přímým setAnimationReady
-    // ScanningView zavolá onDone až doběhne animace
   };
 
   const handleUnlock = async () => {
