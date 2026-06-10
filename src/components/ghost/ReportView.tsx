@@ -175,9 +175,9 @@ export function ReportView({
 
     const tableTheme = {
       headStyles: { fillColor: ACCENT, textColor: WHITE, fontStyle: "bold" as const },
-      bodyStyles: { fillColor: "#1a1a1a", textColor: WHITE },
-      alternateRowStyles: { fillColor: "#161616" },
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#2a2a2a", lineWidth: 0.3 },
+      bodyStyles: { fillColor: "#f9f9f9", textColor: "#111111" },
+      alternateRowStyles: { fillColor: "#f3f3f3" },
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#e5e5e5", lineWidth: 0.3 },
       margin: { left: 40, right: 40 },
     };
 
