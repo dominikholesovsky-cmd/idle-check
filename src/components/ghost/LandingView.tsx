@@ -9,7 +9,13 @@ import type { AnalysisState } from "@/routes/index";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    global: {
+      fetch: (url, options) =>
+        fetch(url, { ...options, signal: AbortSignal.timeout(10000) }),
+    },
+  }
 );
 
 export interface LandingSubmit {
@@ -126,6 +132,24 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         setLoadingModels(false);
       });
   }, [selectedMakeId]);
+
+  useEffect(() => {
+  let retries = 0;
+  const fetchMakes = async () => {
+    const { data, error } = await supabase
+      .from("makes")
+      .select("id, slug, display_name")
+      .order("display_name");
+    if (error && retries < 3) {
+      retries++;
+      setTimeout(fetchMakes, 1000 * retries);
+      return;
+    }
+    setMakes(data ?? []);
+    setLoadingMakes(false);
+  };
+  fetchMakes();
+}, []);
 
   // Load engines when model changes
   useEffect(() => {
