@@ -1,55 +1,54 @@
 import { useEffect, useState } from "react";
 
-const SCAN_LINES = [
-  "Reading listing text...",
-  "Extracting vehicle identity — make, model, year, trim...",
-  "Scanning seller language for evasive patterns...",
-  "Pulling NHTSA recall records for this model year...",
-  "Matching against known failure patterns for this platform...",
-  "Estimating US repair costs at $120/hr labor rate...",
-  "Drafting your negotiation opening...",
-  "Report ready.",
+const UNLOCK_LINES = [
+  "Verifying payment with Stripe...",
+  "Payment confirmed.",
+  "Decrypting full analysis...",
+  "Loading repair cost breakdown...",
+  "Calculating negotiation leverage...",
+  "Preparing your negotiation script...",
+  "Report unlocked.",
 ];
 
-export function ScanningView({ onDone }: { onDone: () => void }) {
+export function PaymentLoadingView({ onDone }: { onDone: () => void }) {
   const [visible, setVisible] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const [lineIdx, setLineIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Typewriter effect
   useEffect(() => {
     if (done) return;
-    if (lineIdx >= SCAN_LINES.length) {
+    if (lineIdx >= UNLOCK_LINES.length) {
       setDone(true);
       return;
     }
-    const line = SCAN_LINES[lineIdx];
+    const line = UNLOCK_LINES[lineIdx];
     if (charIdx <= line.length) {
       const t = setTimeout(() => {
         setCurrent(line.slice(0, charIdx));
         setCharIdx((c) => c + 1);
-      }, 18);
+      }, 22);
       return () => clearTimeout(t);
     }
+    const delay = line === "Payment confirmed." ? 600 : 350;
     const t = setTimeout(() => {
       setVisible((v) => [...v, line]);
       setCurrent("");
       setCharIdx(0);
       setLineIdx((i) => i + 1);
-    }, 400);
+    }, delay);
     return () => clearTimeout(t);
   }, [lineIdx, charIdx, done]);
 
-  // Transition to next view after done
   useEffect(() => {
     if (!done) return;
-    const t = setTimeout(onDone, 600);
+    const t = setTimeout(onDone, 800);
     return () => clearTimeout(t);
   }, [done]);
 
-  const isFinalLine = (s: string) => s.trim() === "Report ready.";
+  const isSpecialLine = (s: string) =>
+    s === "Payment confirmed." || s === "Report unlocked.";
 
   return (
     <section className="view-fade-in relative z-10 mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
@@ -58,13 +57,21 @@ export function ScanningView({ onDone }: { onDone: () => void }) {
           <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
           <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
           <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-          <span className="ml-3">idle-check // analysis.sh</span>
+          <span className="ml-3">idle-check // unlock.sh</span>
         </div>
         <div className="space-y-2">
           {visible.map((line, i) => (
             <div key={i} className="flex gap-2">
               <span className="text-green-500">$</span>
-              <span className={isFinalLine(line) ? "text-[#B22222]" : "text-green-400"}>
+              <span
+                className={
+                  line === "Report unlocked."
+                    ? "text-[#B22222]"
+                    : line === "Payment confirmed."
+                    ? "text-emerald-400"
+                    : "text-green-400"
+                }
+              >
                 {line}
               </span>
             </div>
