@@ -41,6 +41,7 @@ function extractJson(text: string): string {
 export const analyzeVehicle = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
   .handler(async ({ data }) => {
+    console.log("analyzeVehicle called, API key present:", !!process.env.ANTHROPIC_API_KEY);
     const input = data?.data ?? data;
     const listingText = input?.listingText ?? "";
     const make = input?.make ?? "";
