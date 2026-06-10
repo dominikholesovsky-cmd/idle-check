@@ -2,6 +2,14 @@ export type Category = "Engine & Drivetrain" | "Chassis & Suspension" | "Body & 
 export type Severity = "HIGH" | "MED" | "LOW";
 export type Urgency = "Immediate" | "Soon" | "Monitor";
 
+export interface IssuePart {
+  name: string;
+  partNumber?: string;
+  priceUsd?: number;
+  source: "RockAuto" | "eBay Motors" | "OEM Dealer" | "Estimated";
+  url?: string;
+}
+
 export interface Issue {
   id: string;
   label: string;
@@ -14,6 +22,7 @@ export interface Issue {
   labourHours: number;
   explanation: string;
   urgency: Urgency;
+  parts?: IssuePart[];
 }
 
 export interface Vehicle {
