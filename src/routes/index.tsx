@@ -107,7 +107,6 @@ function Index() {
   const [claudeReady, setClaudeReady] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const upgradedEntryRef = useRef<AnalysisState | null>(null);
-  const hasCalledClaudeRef = useRef(false);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -124,7 +123,7 @@ function Index() {
     }
   }, [animationReady]);
 
-  // Unlocking → report až jsou hotové animace i Claude
+  // Unlocking → předej AI data do analysisu jakmile Claude skončí
   useEffect(() => {
     if (claudeReady && phase === "unlocking" && upgradedEntryRef.current) {
       const entry = upgradedEntryRef.current;
@@ -134,15 +133,18 @@ function Index() {
     }
   }, [claudeReady, phase]);
 
-  // Po Stripe redirectu — zavolej Claude API
+  // Po Stripe redirectu — zavolej Claude API jednou
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const reportId = params.get("report_id");
 
     if (!sessionId || !reportId) return;
-    if (hasCalledClaudeRef.current) return;
-    hasCalledClaudeRef.current = true;
+
+    // sessionStorage přežije page reload — zabrání dvojímu volání
+    const callKey = `claude-called-${reportId}`;
+    if (sessionStorage.getItem(callKey)) return;
+    sessionStorage.setItem(callKey, "1");
 
     window.history.replaceState({}, "", "/");
     const hist = loadHistory();
