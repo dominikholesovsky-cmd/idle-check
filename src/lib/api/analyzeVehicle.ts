@@ -92,8 +92,8 @@ Return ONLY valid JSON, no markdown, no explanation:
 }
 
 Rules:
-- Return 6-10 issues specific to ${vehicleStr}
-- Focus on known model-specific problems
+- Return 5-7 issues specific to ${vehicleStr}
+- Focus on top known model-specific problems only
 - costMin/costMax = partsCostMin/partsCostMax + (labourHours * 120)
 - partsCostMin/partsCostMax = parts only in USD
 - labourHours = realistic shop hours
@@ -106,7 +106,7 @@ Rules:
 
       const message = await client.messages.create({
         model: "claude-sonnet-4-5",
-        max_tokens: 2000,
+        max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       });
 
