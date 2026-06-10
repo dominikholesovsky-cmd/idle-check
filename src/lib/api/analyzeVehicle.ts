@@ -66,9 +66,9 @@ Asking price: ${askingPrice ? `$${askingPrice.toLocaleString()}` : "unknown"}
 Listing text:
 ${sanitizeInput(listingText)}
 
-STEP 1: Use web_search to search RockAuto.com for common replacement parts for this specific vehicle. Search queries like "RockAuto ${vehicleStr} [part name]" for the top known failure parts. Find real part numbers and prices.
+Use web_search to find real current prices for the most common failure parts on this specific vehicle on RockAuto.com. Search for specific part numbers and prices.
 
-STEP 2: Return ONLY valid JSON, no markdown, no explanation:
+Return ONLY valid JSON, no markdown, no explanation:
 {
   "issues": [
     {
@@ -113,7 +113,7 @@ Rules:
 - Always prefer RockAuto prices over estimates`;
 
     try {
-      // První volání s web search
+      // Krok 1 — Claude provede web search
       const firstResponse = await client.messages.create({
         model: "claude-sonnet-4-5",
         max_tokens: 4000,
@@ -126,46 +126,54 @@ Rules:
         messages: [{ role: "user", content: prompt }],
       });
 
-      // Zjisti jestli Claude použil web search nebo rovnou vrátil JSON
-      const hasToolUse = firstResponse.content.some(
-        (block) => block.type === "tool_use" || block.type === "tool_result"
-      );
-      const firstTextBlock = firstResponse.content.find(
-        (block) => block.type === "text"
-      );
+      // Krok 2 — vždy pokračuj, požádej o JSON
+      const followUp = await client.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 4000,
+        tools: [
+          {
+            type: "web_search_20250305" as any,
+            name: "web_search",
+          },
+        ],
+        messages: [
+          { role: "user", content: prompt },
+          { role: "assistant", content: firstResponse.content },
+          {
+            role: "user",
+            content: "Now return ONLY the JSON object. No explanation, no markdown, just the raw JSON starting with { and ending with }.",
+          },
+        ],
+      });
 
       let responseText = "";
-
-      if (firstTextBlock && firstTextBlock.type === "text") {
-        responseText = firstTextBlock.text;
+      for (const block of followUp.content) {
+        if (block.type === "text") {
+          responseText = block.text;
+          break;
+        }
       }
 
-      // Pokud web search proběhl ale JSON ještě není, pokračuj v konverzaci
-      if (
-        hasToolUse &&
-        (!responseText || !responseText.includes('"issues"'))
-      ) {
-        const followUp = await client.messages.create({
+      // Krok 3 — pokud stále není JSON, zkus ještě jedno kolo
+      if (!responseText || !responseText.includes('"issues"')) {
+        const finalResponse = await client.messages.create({
           model: "claude-sonnet-4-5",
           max_tokens: 4000,
-          tools: [
-            {
-              type: "web_search_20250305" as any,
-              name: "web_search",
-            },
-          ],
           messages: [
             { role: "user", content: prompt },
             { role: "assistant", content: firstResponse.content },
             {
               role: "user",
-              content:
-                "Now return the complete JSON analysis based on the real prices you found. Return ONLY the JSON object, nothing else.",
+              content: "Now return ONLY the JSON object. No explanation, no markdown, just the raw JSON starting with { and ending with }.",
+            },
+            { role: "assistant", content: followUp.content },
+            {
+              role: "user",
+              content: "Return the JSON now. Start your response with { and nothing else.",
             },
           ],
         });
-
-        for (const block of followUp.content) {
+        for (const block of finalResponse.content) {
           if (block.type === "text") {
             responseText = block.text;
             break;
@@ -173,8 +181,8 @@ Rules:
         }
       }
 
-      if (!responseText) {
-        throw new Error("No text response from Claude");
+      if (!responseText || !responseText.includes('"issues"')) {
+        throw new Error("No valid JSON response after retries");
       }
 
       const parsed = JSON.parse(extractJson(responseText));
