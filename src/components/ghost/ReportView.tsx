@@ -394,15 +394,6 @@ export function ReportView({
                   <FileDown className="h-3.5 w-3.5" />
                   Export PDF
                 </Button>
-                <Button
-                  onClick={onNewReport}
-                  variant="outline"
-                  size="sm"
-                  className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-                >
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  New Report
-                </Button>
               </div>
             </div>
           </div>
