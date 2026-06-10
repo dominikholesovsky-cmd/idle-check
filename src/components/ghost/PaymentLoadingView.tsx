@@ -10,7 +10,13 @@ const UNLOCK_LINES = [
   "Report unlocked.",
 ];
 
-export function PaymentLoadingView({ onDone }: { onDone: () => void }) {
+export function PaymentLoadingView({
+  onDone,
+  claudeReady,
+}: {
+  onDone: () => void;
+  claudeReady: boolean;
+}) {
   const [visible, setVisible] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const [lineIdx, setLineIdx] = useState(0);
@@ -38,11 +44,15 @@ export function PaymentLoadingView({ onDone }: { onDone: () => void }) {
     return () => clearTimeout(t);
   }, [lineIdx, charIdx, done]);
 
+  // Počkej na Claude i animaci
   useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(onDone, 800);
+    if (!done || !claudeReady) return;
+    const t = setTimeout(onDone, 400);
     return () => clearTimeout(t);
-  }, [done]);
+  }, [done, claudeReady]);
+
+  const waiting = done && !claudeReady;
+  const isFinalLine = (s: string) => s === "Report unlocked.";
 
   return (
     <section className="view-fade-in relative z-10 mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
@@ -58,7 +68,7 @@ export function PaymentLoadingView({ onDone }: { onDone: () => void }) {
             <div key={i} className="flex gap-2">
               <span className="text-green-500">$</span>
               <span className={
-                line === "Report unlocked." ? "text-[#B22222]" :
+                isFinalLine(line) ? "text-[#B22222]" :
                 line === "Payment confirmed." ? "text-emerald-400" :
                 "text-green-400"
               }>
@@ -72,6 +82,19 @@ export function PaymentLoadingView({ onDone }: { onDone: () => void }) {
               <span className="text-green-400">
                 {current}
                 <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-green-400 align-middle" />
+              </span>
+            </div>
+          )}
+          {waiting && (
+            <div className="flex gap-2">
+              <span className="text-green-500">$</span>
+              <span className="flex items-center gap-1 text-yellow-400/80">
+                Finalizing your report
+                <span className="inline-flex gap-[3px] ml-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </span>
               </span>
             </div>
           )}

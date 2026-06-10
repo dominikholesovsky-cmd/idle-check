@@ -104,10 +104,13 @@ function Index() {
   const [history, setHistory] = useState<AnalysisState[]>([]);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [animationReady, setAnimationReady] = useState(false);
+  const [claudeReady, setClaudeReady] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
+  const upgradedEntryRef = useRef<AnalysisState | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
+  // Scanning → preview po animaci
   useEffect(() => {
     if (animationReady && pendingEntryRef.current) {
       const entry = pendingEntryRef.current;
@@ -120,6 +123,17 @@ function Index() {
     }
   }, [animationReady]);
 
+  // Unlocking → report až jsou hotové animace i Claude
+  useEffect(() => {
+    if (claudeReady && phase === "unlocking" && upgradedEntryRef.current) {
+      const entry = upgradedEntryRef.current;
+      upgradedEntryRef.current = null;
+      setClaudeReady(false);
+      setAnalysis(entry);
+    }
+  }, [claudeReady, phase]);
+
+  // Po Stripe redirectu — zavolej Claude API
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -137,7 +151,6 @@ function Index() {
     setPhase("unlocking");
     window.scrollTo({ top: 0 });
 
-    // Claude API se volá až po platbě
     analyzeVehicle({
       data: {
         listingText: entry.listingText ?? "",
@@ -151,7 +164,6 @@ function Index() {
     })
       .then((aiResult) => {
         if (aiResult.issues.length > 0) {
-          // Claude uspěl — nahraď procedurální data AI daty
           const upgraded: AnalysisState = {
             ...entry,
             unlocked: true,
@@ -159,7 +171,7 @@ function Index() {
             sellerRedFlags: aiResult.sellerRedFlags,
             marketValueNote: aiResult.marketValueNote,
           };
-          setAnalysis(upgraded);
+          upgradedEntryRef.current = upgraded;
           updateHistoryEntry(reportId, {
             unlocked: true,
             issues: aiResult.issues,
@@ -167,13 +179,13 @@ function Index() {
             marketValueNote: aiResult.marketValueNote,
           });
         } else {
-          // Claude selhal nebo vrátil prázdno — procedurální data zůstanou
-          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+          upgradedEntryRef.current = { ...entry, unlocked: true };
         }
+        setClaudeReady(true);
       })
       .catch(() => {
-        // Síťová chyba — procedurální data zůstanou, report se zobrazí
-        setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+        upgradedEntryRef.current = { ...entry, unlocked: true };
+        setClaudeReady(true);
       });
   }, []);
 
@@ -268,7 +280,9 @@ function Index() {
     setAnalysis(null);
     setAnalyzeError(null);
     setAnimationReady(false);
+    setClaudeReady(false);
     pendingEntryRef.current = null;
+    upgradedEntryRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -317,6 +331,7 @@ function Index() {
               setPhase("report");
               window.scrollTo({ top: 0 });
             }}
+            claudeReady={claudeReady}
           />
         )}
 
