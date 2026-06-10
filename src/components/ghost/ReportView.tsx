@@ -124,16 +124,24 @@ export function ReportView({
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const BG = "#ffffff";
     const ACCENT = "#b22222";
     const TEXT = "#111111";
     const MUTED = "#6b7280";
 
-    const paintBg = () => {
-      doc.setFillColor(BG);
-      doc.rect(0, 0, pageW, pageH, "F");
+    const tableTheme = {
+      headStyles: { fillColor: ACCENT, textColor: "#ffffff", fontStyle: "bold" as const },
+      bodyStyles: { fillColor: "#f9f9f9", textColor: TEXT },
+      alternateRowStyles: { fillColor: "#f3f3f3" },
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: 6,
+        lineColor: "#e5e5e5" as unknown as number,
+        lineWidth: 0.3,
+        textColor: TEXT,
+      },
+      margin: { left: 40, right: 40 },
     };
-    paintBg();
 
     // Header
     doc.setTextColor(ACCENT);
@@ -141,14 +149,18 @@ export function ReportView({
     doc.setFontSize(20);
     doc.text("IDLE // CHECK REPORT", 40, 60);
 
-    doc.setTextColor(WHITE);
+    doc.setTextColor(TEXT);
     doc.setFontSize(14);
     doc.text(vehicleName || "Vehicle Report", 40, 84);
 
     doc.setTextColor(MUTED);
     doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
     const dateStr = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    doc.text(`${dateStr}${mileageStr ? ` · ${mileageStr}` : ""} · Asked on ${marketplace || "Unknown"} · $${displayPrice.toLocaleString()}`, 40, 102);
+    doc.text(
+      `${dateStr}${mileageStr ? ` · ${mileageStr}` : ""} · Asked on ${marketplace || "Unknown"} · $${displayPrice.toLocaleString()}`,
+      40, 102
+    );
 
     doc.setDrawColor(ACCENT);
     doc.setLineWidth(1.5);
@@ -161,27 +173,21 @@ export function ReportView({
     doc.setFont("helvetica", "bold");
     doc.text(`VERDICT · ${safeRecommendation.verdict.toUpperCase()}`, 40, y);
     y += 18;
-    doc.setTextColor(WHITE);
+
+    doc.setTextColor(TEXT);
     doc.setFontSize(13);
     const headlineLines = doc.splitTextToSize(safeRecommendation.headline || "", pageW - 80);
     doc.text(headlineLines, 40, y);
     y += headlineLines.length * 16 + 6;
+
     doc.setTextColor(MUTED);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     const summaryLines = doc.splitTextToSize(safeRecommendation.summary || "", pageW - 80);
     doc.text(summaryLines, 40, y);
-    y += summaryLines.length * 13 + 14;
+    y += summaryLines.length * 13 + 20;
 
-    const tableTheme = {
-      headStyles: { fillColor: ACCENT, textColor: "#ffffff", fontStyle: "bold" as const },
-      bodyStyles: { fillColor: "#f9f9f9", textColor: "#111111" },
-      alternateRowStyles: { fillColor: "#f3f3f3" },
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 6, lineColor: "#e5e5e5", lineWidth: 0.3 },
-      margin: { left: 40, right: 40 },
-    };
-
-    // Issues
+    // Issues table
     if (issues.length) {
       doc.setTextColor(ACCENT);
       doc.setFontSize(11);
@@ -191,34 +197,53 @@ export function ReportView({
       autoTable(doc, {
         startY: y,
         head: [["Issue", "Severity", "Cost Range"]],
-        body: issues.map((i) => [i.label, i.severity, `$${i.costMin.toLocaleString()} – $${i.costMax.toLocaleString()}`]),
+        body: issues.map((i) => [
+          i.label,
+          i.severity,
+          `$${i.costMin.toLocaleString()} – $${i.costMax.toLocaleString()}`,
+        ]),
         ...tableTheme,
-        didDrawPage: () => paintBg(),
       });
-      y = (doc as any).lastAutoTable.finalY + 20;
+      y = (doc as any).lastAutoTable.finalY + 24;
     }
 
     // Red Flags
     if (hasRedFlags) {
-      if (y > pageH - 120) { doc.addPage(); paintBg(); y = 60; }
+      if (y > pageH - 120) { doc.addPage(); y = 60; }
       doc.setTextColor(ACCENT);
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.text("SELLER RED FLAGS", 40, y);
-      y += 14;
-      doc.setTextColor(WHITE);
+      y += 16;
+      doc.setTextColor(TEXT);
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       sellerRedFlags!.forEach((flag) => {
         const lines = doc.splitTextToSize(`• ${flag}`, pageW - 80);
-        if (y + lines.length * 13 > pageH - 60) { doc.addPage(); paintBg(); y = 60; }
+        if (y + lines.length * 13 > pageH - 60) { doc.addPage(); y = 60; }
         doc.text(lines, 40, y);
         y += lines.length * 13 + 4;
       });
-      y += 8;
+      y += 16;
     }
 
-    // Generic inspection checklist
+    // Market value note
+    if (hasMarketNote) {
+      if (y > pageH - 80) { doc.addPage(); y = 60; }
+      doc.setTextColor(ACCENT);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("MARKET VALUE", 40, y);
+      y += 16;
+      doc.setTextColor(TEXT);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const mvLines = doc.splitTextToSize(marketValueNote!, pageW - 80);
+      doc.text(mvLines, 40, y);
+      y += mvLines.length * 13 + 20;
+    }
+
+    // Inspection checklist
     const checklist: Record<string, string[]> = {
       "Exterior": ["Paint consistency & overspray", "Panel gaps even on all sides", "Rust on rocker panels & wheel arches", "Tire tread & uneven wear", "Windshield chips / cracks"],
       "Under Hood": ["Oil level & color (not milky)", "Coolant level & color", "Belt cracks & tension", "Battery terminals clean", "No fluid leaks on engine block"],
@@ -226,11 +251,11 @@ export function ReportView({
       "Test Drive": ["Cold start without rough idle", "Smooth acceleration through gears", "Brakes straight, no pulsing", "Steering centered, no pull", "No vibration at 60+ mph"],
       "Under Car": ["No fresh oil / coolant drips", "Exhaust intact, no rust holes", "CV boots not torn", "Suspension bushings not cracked", "Frame: no welds or kinks"],
     };
-    if (y > pageH - 180) { doc.addPage(); paintBg(); y = 60; }
+    if (y > pageH - 180) { doc.addPage(); y = 60; }
     doc.setTextColor(ACCENT);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("INSPECTION CHECKLIST", 40, y);
+    doc.text("PRE-PURCHASE INSPECTION CHECKLIST", 40, y);
     y += 8;
     autoTable(doc, {
       startY: y,
@@ -239,26 +264,23 @@ export function ReportView({
         items.map((it, idx) => [idx === 0 ? area : "", it])
       ),
       ...tableTheme,
-      didDrawPage: () => paintBg(),
     });
-    y = (doc as any).lastAutoTable.finalY + 20;
+    y = (doc as any).lastAutoTable.finalY + 24;
 
     // Recalls
     if (recalls.length) {
-      if (y > pageH - 120) { doc.addPage(); paintBg(); y = 60; }
+      if (y > pageH - 120) { doc.addPage(); y = 60; }
       doc.setTextColor(ACCENT);
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.text("RECALLS", 40, y);
+      doc.text("NHTSA RECALLS", 40, y);
       y += 8;
       autoTable(doc, {
         startY: y,
         head: [["Date", "Component", "Status"]],
         body: recalls.map((r) => [r.date, r.component, r.status]),
         ...tableTheme,
-        didDrawPage: () => paintBg(),
       });
-      y = (doc as any).lastAutoTable.finalY + 20;
     }
 
     // Footer on every page
@@ -290,20 +312,16 @@ export function ReportView({
 
   return (
     <>
-      {/* Fixed scroll progress bar (top) */}
-      <div
-        className="fixed left-0 right-0 top-0 z-50 h-[3px] bg-transparent"
-        aria-hidden
-      >
+      {/* Fixed scroll progress bar */}
+      <div className="fixed left-0 right-0 top-0 z-50 h-[3px] bg-transparent" aria-hidden>
         <div
           className="h-full origin-left bg-gradient-to-r from-primary/70 to-primary shadow-[0_0_12px_rgba(220,38,38,0.6)] transition-[width] duration-150 ease-out"
           style={{ width: `${scrollProgress * 100}%` }}
         />
       </div>
 
-      {/* Fixed left sidebar (desktop only) */}
+      {/* Fixed left sidebar */}
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-border bg-card lg:block">
-        {/* Vertical progress bar on left edge */}
         <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
           <div
             className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
@@ -336,159 +354,160 @@ export function ReportView({
       </aside>
 
       <div className="lg:pl-[200px]">
-      <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
-        {/* Status bar */}
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Full Report Unlocked
+        <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+
+          {/* Status bar */}
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Full Report Unlocked
+                </div>
+                <div className="mt-1 text-base font-bold sm:text-lg">
+                  {vehicleName}
+                  {vehicle.engineType && (
+                    <span className="ml-2 font-condensed text-[13px] font-normal text-muted-foreground">
+                      {vehicle.engineType}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-[12px] text-muted-foreground">
+                  {mileageStr && <>{mileageStr} · </>}Asked on {marketplace || "Unknown"}
+                  {vehicle.vin && <span className="ml-2 font-mono text-[11px]">VIN: {vehicle.vin}</span>}
+                </div>
               </div>
-              <div className="mt-1 text-base font-bold sm:text-lg">
-                {vehicleName}
-                {vehicle.engineType && (
-                  <span className="ml-2 font-condensed text-[13px] font-normal text-muted-foreground">
-                    {vehicle.engineType}
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Asking Price
+                  </div>
+                  <div className="font-mono text-xl font-bold tabular-nums">
+                    ${displayPrice.toLocaleString()}
+                  </div>
+                </div>
+                <Button
+                  onClick={exportPdf}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                >
+                  <FileDown className="h-3.5 w-3.5" />
+                  Export PDF
+                </Button>
+                <Button
+                  onClick={onNewReport}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  New Report
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Verdict */}
+          <div id="section-verdict">
+            <RecommendationCard recommendation={safeRecommendation} issues={issues} />
+          </div>
+
+          {/* Market value */}
+          {hasMarketNote && (
+            <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
+              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Market Value
+                </span>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-foreground">{marketValueNote}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Red flags */}
+          {hasRedFlags && (
+            <div className="rounded-xl border border-border border-l-4 border-l-primary bg-card p-4 sm:p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  Seller Red Flags · {sellerRedFlags!.length} detected
+                </h2>
+              </div>
+              <ul className="space-y-1.5">
+                {sellerRedFlags!.map((flag, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    <span className="text-[13px] leading-relaxed text-foreground">{flag}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Checklist + Budget */}
+          <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Inspection Checklist
+                </h2>
+                {recommendedIds.size > 0 && (
+                  <span className="font-condensed text-[11px] text-muted-foreground">
+                    <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
+                    {recommendedIds.size} recommended
                   </span>
                 )}
               </div>
-              <div className="mt-0.5 text-[12px] text-muted-foreground">
-                {mileageStr && <>{mileageStr} · </>}Asked on {marketplace || "Unknown"}
-                {vehicle.vin && <span className="ml-2 font-mono text-[11px]">VIN: {vehicle.vin}</span>}
-              </div>
+              <InspectionChecklist
+                issues={issues}
+                checked={checked}
+                onToggle={toggle}
+                recommendedIds={recommendedIds}
+              />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Asking Price
-                </div>
-                <div className="font-mono text-xl font-bold tabular-nums">
-                  ${displayPrice.toLocaleString()}
-                </div>
-              </div>
-              <Button
-                onClick={exportPdf}
-                variant="outline"
-                size="sm"
-                className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-              >
-                <FileDown className="h-3.5 w-3.5" />
-                Export PDF
-              </Button>
-              <Button
-                onClick={onNewReport}
-                variant="outline"
-                size="sm"
-                className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                New Report
-              </Button>
-            </div>
+            <aside className="lg:sticky lg:top-6 lg:self-start">
+              <RepairCostTracker
+                issues={issues}
+                checked={checked}
+                askingPrice={displayPrice}
+              />
+              <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+                Tip: click a category to expand. Tick items to update the budget.
+              </p>
+            </aside>
           </div>
-        </div>
 
-        {/* Verdict */}
-        <div id="section-verdict">
-          <RecommendationCard recommendation={safeRecommendation} issues={issues} />
-        </div>
-
-        {/* Market value */}
-        {hasMarketNote && (
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
-            <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div>
-              <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Market Value
-              </span>
-              <p className="mt-0.5 text-[13px] leading-relaxed text-foreground">{marketValueNote}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Red flags */}
-        {hasRedFlags && (
-          <div className="rounded-xl border border-border border-l-4 border-l-primary bg-card p-4 sm:p-5">
-            <div className="mb-2 flex items-center gap-2">
-              <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-              <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                Seller Red Flags · {sellerRedFlags!.length} detected
-              </h2>
-            </div>
-            <ul className="space-y-1.5">
-              {sellerRedFlags!.map((flag, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  <span className="text-[13px] leading-relaxed text-foreground">{flag}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Checklist + Budget sidebar */}
-        <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Inspection Checklist
-              </h2>
-              {recommendedIds.size > 0 && (
-                <span className="font-condensed text-[11px] text-muted-foreground">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
-                  {recommendedIds.size} recommended
-                </span>
-              )}
-            </div>
-            <InspectionChecklist
-              issues={issues}
-              checked={checked}
-              onToggle={toggle}
-              recommendedIds={recommendedIds}
-            />
-          </div>
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <RepairCostTracker
-              issues={issues}
-              checked={checked}
+          {/* Negotiation */}
+          <div id="section-negotiation" className="mx-auto w-full max-w-3xl">
+            <NegotiationScript
+              vehicle={vehicle}
               askingPrice={displayPrice}
+              checkedIssues={checkedIssues}
+              repairTotal={grandTotal}
+              suggestedOffer={suggestedOffer}
             />
-            <p className="mt-2 px-1 text-[11px] text-muted-foreground">
-              Tip: click a category to expand. Tick items to update the budget.
-            </p>
-          </aside>
-        </div>
-
-        {/* Negotiation */}
-        <div id="section-negotiation" className="mx-auto w-full max-w-3xl">
-          <NegotiationScript
-            vehicle={vehicle}
-            askingPrice={displayPrice}
-            checkedIssues={checkedIssues}
-            repairTotal={grandTotal}
-            suggestedOffer={suggestedOffer}
-          />
-        </div>
-
-        {/* Recalls */}
-        <div id="section-recalls">
-          <div className="mb-3 flex items-center gap-2">
-            <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
-            <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
-              {recallBadge.label}
-            </span>
           </div>
-          {recalls.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-              No recall records found for this vehicle.
+
+          {/* Recalls */}
+          <div id="section-recalls">
+            <div className="mb-3 flex items-center gap-2">
+              <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
+              <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
+                {recallBadge.label}
+              </span>
             </div>
-          ) : (
-            <RecallSection recalls={recalls} />
-          )}
-        </div>
-      </section>
+            {recalls.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                No recall records found for this vehicle.
+              </div>
+            ) : (
+              <RecallSection recalls={recalls} />
+            )}
+          </div>
+
+        </section>
       </div>
     </>
-
   );
 }
