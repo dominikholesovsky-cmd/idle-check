@@ -88,7 +88,7 @@ function TermsOfService() {
               Full reports are available for a one-time payment of $4.99 USD, processed by
               Stripe. Payments are non-refundable once the full report has been delivered, except
               where required by applicable law. If you experience a technical issue preventing
-              report delivery, contact us at [YOUR EMAIL] within 7 days for a full refund.
+              report delivery, contact us at dominik.holesovsky@gmail.com within 7 days for a full refund.
             </p>
           </section>
 
@@ -142,9 +142,9 @@ function TermsOfService() {
               9. Governing Law
             </h2>
             <p>
-              These Terms are governed by the laws of [YOUR STATE/COUNTRY], without regard to
+              These Terms are governed by the laws of the Czech Republic, without regard to
               conflict of law principles. Any disputes arising from use of the Service shall be
-              resolved in the courts of [YOUR JURISDICTION].
+              resolved in the courts of the Czech Republic.
             </p>
           </section>
 
@@ -165,8 +165,8 @@ function TermsOfService() {
             </h2>
             <p>
               For questions about these Terms, contact us at{" "}
-              <a href="mailto:[YOUR EMAIL]" className="text-primary hover:underline">
-                [YOUR EMAIL]
+              <a href="mailto:dominik.holesovsky@gmail.com" className="text-primary hover:underline">
+                dominik.holesovsky@gmail.com
               </a>.
             </p>
           </section>
