@@ -12,6 +12,7 @@ import { fetchRecalls } from "@/lib/api/fetchRecalls";
 import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
 import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
 import { saveReport } from "@/lib/api/saveReport";
+import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -206,6 +207,13 @@ function Index() {
               marketValueNote: aiResult.marketValueNote,
               recommendation: newRecommendation,
             });
+            // Save to Supabase then fire email — both fire-and-forget
+            void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
+              .then((saved) => {
+                setShareId(saved.id);
+                return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
+              })
+              .catch((err) => console.error("Post-report tasks failed:", err));
           } else {
             console.log("0 issues from Claude, keeping procedural");
             setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
@@ -361,10 +369,6 @@ function Index() {
             onDone={() => {
               setPhase("report");
               window.scrollTo({ top: 0 });
-              // Save report to Supabase for shareable URL
-              void saveReport({ data: { reportJson: analysis as unknown as Record<string, unknown> } })
-                .then((result) => setShareId(result.id))
-                .catch((err) => console.error("Failed to save report for sharing:", err));
             }}
             claudePromise={claudePromise}
           />
