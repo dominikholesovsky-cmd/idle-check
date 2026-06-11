@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, ChevronRight, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { Clock, ChevronRight, ChevronDown, CheckCircle2 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,9 +109,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
   const [pendingVinDecode, setPendingVinDecode] = useState<{ model: string; year: string } | null>(null);
   const [vinDecoded, setVinDecoded] = useState(false);
 
-  // Manual fields expanded by default — collapse once VIN decodes successfully
-  const [manualExpanded, setManualExpanded] = useState(true);
-
   // Load makes on mount (with retry)
   useEffect(() => {
     let retries = 0;
@@ -178,7 +175,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
     }
     if (nhtsaYear) setYear(nhtsaYear);
     setVinDecoded(true);
-    setManualExpanded(false);
   }, [models, loadingModels, pendingVinDecode]);
 
   const decodeVin = async (rawVin: string) => {
@@ -206,7 +202,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       if (errorCode !== "0" || !nhtsaMake || !nhtsaModel) {
         setVinError("VIN not found — check for typos or enter vehicle details manually.");
         setVinLoading(false);
-        setManualExpanded(true);
         return;
       }
 
@@ -220,11 +215,9 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       } else {
         if (nhtsaYear) setYear(nhtsaYear);
         setVinError(`"${nhtsaMake}" not in our database — select make/model manually.`);
-        setManualExpanded(true);
       }
     } catch {
       setVinError("Could not decode VIN — check your connection and try again.");
-      setManualExpanded(true);
     } finally {
       setVinLoading(false);
     }
@@ -405,120 +398,98 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             </p>
           </div>
 
-          {/* Divider + manual toggle */}
-          <div className="px-5 pb-1">
-            <button
-              type="button"
-              onClick={() => setManualExpanded((v) => !v)}
-              className="flex w-full items-center gap-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <span className="h-px flex-1 bg-border" />
-              {manualExpanded ? (
-                <>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  <span>Hide manual fields</span>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  <span>Or fill in manually</span>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </>
-              )}
-              <span className="h-px flex-1 bg-border" />
-            </button>
-          </div>
+          {/* Divider */}
+          <div className="mx-5 border-t border-border" />
 
-          {/* Collapsible manual fields */}
-          {manualExpanded && (
-            <div className="space-y-3 px-5 pb-5 pt-2">
+          {/* Vehicle detail fields — always visible */}
+          <div className="space-y-3 px-5 pb-5 pt-4">
 
-              {/* Make + Model */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Make <span className="text-primary">*</span>
-                  </label>
-                  <Select
-                    value={make}
-                    onChange={handleMakeChange}
-                    options={makes.map((m) => ({ value: m.display_name, label: m.display_name }))}
-                    placeholder="Select make..."
-                    loading={loadingMakes}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Model <span className="text-primary">*</span>
-                  </label>
-                  <Select
-                    value={model}
-                    onChange={handleModelChange}
-                    options={models.map((m) => ({ value: m.display_name, label: m.display_name }))}
-                    placeholder={make ? "Select model..." : "Select make first"}
-                    disabled={!make}
-                    loading={loadingModels}
-                  />
-                </div>
-              </div>
-
-              {/* Engine */}
+            {/* Make + Model */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Engine
-                  <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/60">optional</span>
+                  Make <span className="text-primary">*</span>
                 </label>
                 <Select
-                  value={engineType}
-                  onChange={setEngineType}
-                  options={engines.map((e) => ({ value: e.display_name, label: e.display_name }))}
-                  placeholder={model ? "Select engine..." : "Select model first"}
-                  disabled={!model}
-                  loading={loadingEngines}
+                  value={make}
+                  onChange={handleMakeChange}
+                  options={makes.map((m) => ({ value: m.display_name, label: m.display_name }))}
+                  placeholder="Select make..."
+                  loading={loadingMakes}
                 />
               </div>
+              <div>
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Model <span className="text-primary">*</span>
+                </label>
+                <Select
+                  value={model}
+                  onChange={handleModelChange}
+                  options={models.map((m) => ({ value: m.display_name, label: m.display_name }))}
+                  placeholder={make ? "Select model..." : "Select make first"}
+                  disabled={!make}
+                  loading={loadingModels}
+                />
+              </div>
+            </div>
 
-              {/* Year + Mileage */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Year <span className="text-primary">*</span>
-                  </label>
+            {/* Year + Mileage */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Year <span className="text-primary">*</span>
+                </label>
+                <Input
+                  type="number"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  placeholder="e.g. 2004"
+                  min={1970}
+                  max={2026}
+                  className="transition-colors focus-visible:border-primary focus-visible:ring-0"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Mileage
+                  <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
+                </label>
+                <div className="relative">
                   <Input
                     type="number"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    placeholder="e.g. 2004"
-                    min={1970}
-                    max={2026}
-                    className="transition-colors focus-visible:border-primary focus-visible:ring-0"
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value)}
+                    placeholder="e.g. 87000"
+                    min={0}
+                    max={999999}
+                    className="pr-8 transition-colors focus-visible:border-primary focus-visible:ring-0"
                   />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    mi
+                  </span>
                 </div>
-                <div>
-                  <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Mileage
-                    <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/60">optional</span>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      value={mileage}
-                      onChange={(e) => setMileage(e.target.value)}
-                      placeholder="e.g. 87000"
-                      min={0}
-                      max={999999}
-                      className="pr-8 transition-colors focus-visible:border-primary focus-visible:ring-0"
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      mi
-                    </span>
-                  </div>
-                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground/70">Affects wear estimates significantly</p>
               </div>
-
             </div>
-          )}
+
+            {/* Engine */}
+            <div>
+              <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Engine
+                <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
+              </label>
+              <Select
+                value={engineType}
+                onChange={setEngineType}
+                options={engines.map((e) => ({ value: e.display_name, label: e.display_name }))}
+                placeholder={model ? "Select engine..." : "Select model first"}
+                disabled={!model}
+                loading={loadingEngines}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground/70">Required for accurate repair costs</p>
+            </div>
+
+          </div>
         </div>
 
         {/* Asking price */}
