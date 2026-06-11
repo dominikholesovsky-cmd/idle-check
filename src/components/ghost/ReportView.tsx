@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { PlusCircle, AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check } from "lucide-react";
+import { PlusCircle, AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,9 @@ export function ReportView({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState<string>("verdict");
-  const [copied, setCopied] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedInsta, setCopiedInsta] = useState(false);
 
   useEffect(() => {
     const ids = ["section-verdict", "section-issues", "section-negotiation", "section-recalls"];
@@ -314,6 +316,8 @@ export function ReportView({
     { id: "recalls", label: "Recalls" },
   ];
 
+  const shareUrl = shareId ? `${typeof window !== "undefined" ? window.location.origin : "https://idle-check.vercel.app"}/report/${shareId}` : "";
+
   return (
     <>
       {/* Fixed scroll progress bar */}
@@ -392,19 +396,13 @@ export function ReportView({
                 <div className="flex items-center gap-2">
                   {shareId && !isSharedView && (
                     <Button
-                      onClick={() => {
-                        const url = `${window.location.origin}/report/${shareId}`;
-                        navigator.clipboard.writeText(url).then(() => {
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                        });
-                      }}
+                      onClick={() => setShowShareModal(true)}
                       variant="outline"
                       size="sm"
                       className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
                     >
-                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Share2 className="h-3.5 w-3.5" />}
-                      {copied ? "Copied!" : "Share"}
+                      <Share2 className="h-3.5 w-3.5" />
+                      Share
                     </Button>
                   )}
                   <Button
@@ -522,6 +520,94 @@ export function ReportView({
 
         </section>
       </div>
+
+      {/* Share modal */}
+      {showShareModal && shareId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-border bg-background shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div>
+                <p className="font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Share Report</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground">{vehicleName}</p>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-2 p-4">
+
+              {/* Copy link */}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl).then(() => {
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  });
+                }}
+                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                  {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Link className="h-4 w-4 text-primary" />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{copiedLink ? "Copied!" : "Copy link"}</p>
+                  <p className="text-[11px] text-muted-foreground">Share via any app or message</p>
+                </div>
+              </button>
+
+              {/* Email */}
+              <a
+                href={`mailto:?subject=${encodeURIComponent("Check this car — Idle Check report")}&body=${encodeURIComponent(`I ran this listing through Idle Check and thought you'd want to see the results:\n\n${shareUrl}`)}`}
+                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                  <Mail className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Email</p>
+                  <p className="text-[11px] text-muted-foreground">Opens your email app</p>
+                </div>
+              </a>
+
+              {/* Copy for Instagram */}
+              <button
+                onClick={() => {
+                  const text = `Check out this car inspection 👉 ${shareUrl}`;
+                  navigator.clipboard.writeText(text).then(() => {
+                    setCopiedInsta(true);
+                    setTimeout(() => setCopiedInsta(false), 2000);
+                  });
+                }}
+                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                  {copiedInsta
+                    ? <Check className="h-4 w-4 text-emerald-500" />
+                    : <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{copiedInsta ? "Copied!" : "Copy for Instagram"}</p>
+                  <p className="text-[11px] text-muted-foreground">Paste into DM or story caption</p>
+                </div>
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
