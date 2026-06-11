@@ -13,6 +13,7 @@ import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
 import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
 import { saveReport } from "@/lib/api/saveReport";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
+import { loadReportBySession } from "@/lib/api/loadReportBySession";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -115,6 +116,16 @@ function Index() {
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
+  // Refresh recovery: if no session_id in URL but active share exists → go straight to report
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session_id")) return; // payment flow handles this
+    const activeShare = sessionStorage.getItem("idlecheck_active_share");
+    if (activeShare) {
+      window.location.replace(`/report/${activeShare}`);
+    }
+  }, []);
+
   // Scanning → preview po animaci
   useEffect(() => {
     if (animationReady && pendingEntryRef.current) {
@@ -136,24 +147,48 @@ function Index() {
 
     if (!sessionId || !reportId) return;
 
-    const callKey = `claude-called-${reportId}`;
-    if (sessionStorage.getItem(callKey)) {
-      console.log("Already called for this reportId, skipping");
-      return;
-    }
-    sessionStorage.setItem(callKey, "1");
-
-    window.history.replaceState({}, "", "/");
-    const hist = loadHistory();
-    const entry = hist.find((e) => e.reportId === reportId);
-    if (!entry) {
-      console.error("Entry not found:", reportId);
-      return;
-    }
-
-    console.log("Starting Claude for reportId:", reportId);
-
     void (async () => {
+      // Guard 1: sessionStorage cache — already processed this session
+      const cachedShareId = sessionStorage.getItem(`idlecheck_session_${sessionId}`);
+      if (cachedShareId) {
+        window.history.replaceState({}, "", "/");
+        window.location.replace(`/report/${cachedShareId}`);
+        return;
+      }
+
+      // Guard 2: claude-called dedup within same tab
+      const callKey = `claude-called-${reportId}`;
+      if (sessionStorage.getItem(callKey)) {
+        console.log("Already called for this reportId, skipping");
+        return;
+      }
+
+      // Guard 3: Supabase check — report may already be saved (e.g. refresh mid-unlocking)
+      try {
+        const existing = await loadReportBySession({ data: { sessionId } });
+        if (existing?.shareId) {
+          sessionStorage.setItem(`idlecheck_session_${sessionId}`, existing.shareId);
+          sessionStorage.setItem("idlecheck_active_share", existing.shareId);
+          window.history.replaceState({}, "", "/");
+          window.location.replace(`/report/${existing.shareId}`);
+          return;
+        }
+      } catch {
+        // Non-fatal — proceed with Claude
+      }
+
+      sessionStorage.setItem(callKey, "1");
+      window.history.replaceState({}, "", "/");
+
+      const hist = loadHistory();
+      const entry = hist.find((e) => e.reportId === reportId);
+      if (!entry) {
+        console.error("Entry not found:", reportId);
+        return;
+      }
+
+      console.log("Starting Claude for reportId:", reportId);
+
       // Ověř platbu přes Stripe API před voláním Claude
       try {
         const verification = await verifyStripeSession({ data: { sessionId } });
@@ -207,9 +242,11 @@ function Index() {
               marketValueNote: aiResult.marketValueNote,
               recommendation: newRecommendation,
             });
-            // Save to Supabase then fire email — both fire-and-forget
             void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
               .then((saved) => {
+                // Persist session → shareId mapping so refresh/revisit recovers the report
+                sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
+                sessionStorage.setItem("idlecheck_active_share", saved.id);
                 setShareId(saved.id);
                 return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
               })
@@ -315,6 +352,8 @@ function Index() {
   };
 
   const goHome = () => {
+    // Clear active share so the recovery redirect doesn't kick in for the new session
+    sessionStorage.removeItem("idlecheck_active_share");
     setPhase("landing");
     setAnalysis(null);
     setAnalyzeError(null);
