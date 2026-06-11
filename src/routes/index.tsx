@@ -10,6 +10,7 @@ import { PaymentLoadingView } from "@/components/ghost/PaymentLoadingView";
 import { analyzeVehicle } from "@/lib/api/analyzeVehicle";
 import { fetchRecalls } from "@/lib/api/fetchRecalls";
 import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
+import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -148,58 +149,72 @@ function Index() {
     }
 
     console.log("Starting Claude for reportId:", reportId);
-    updateHistoryEntry(reportId, { unlocked: true });
-    setAnalysis({ ...entry, unlocked: true });
-    setPhase("unlocking");
-    window.scrollTo({ top: 0 });
 
-    const promise = analyzeVehicle({
-      data: {
-        listingText: entry.listingText ?? "",
-        make: entry.vehicle.make,
-        model: entry.vehicle.model,
-        year: entry.vehicle.year,
-        engineType: entry.engineType,
-        mileage: entry.vehicle.mileage,
-        askingPrice: entry.askingPrice,
-      },
-    })
-      .then((aiResult) => {
-        console.log("Claude done, issues:", aiResult.issues.length);
-        if (aiResult.issues.length > 0) {
-          // Přegeneruj recommendation z nových AI issues — opravuje prázdnou roadmapu
-          const newRecommendation = generateRecommendation(
-            entry.vehicle,
-            aiResult.issues,
-            entry.askingPrice
-          );
-          const upgraded: AnalysisState = {
-            ...entry,
-            unlocked: true,
-            issues: aiResult.issues,
-            sellerRedFlags: aiResult.sellerRedFlags,
-            marketValueNote: aiResult.marketValueNote,
-            recommendation: newRecommendation,
-          };
-          setAnalysis(upgraded);
-          updateHistoryEntry(reportId, {
-            unlocked: true,
-            issues: aiResult.issues,
-            sellerRedFlags: aiResult.sellerRedFlags,
-            marketValueNote: aiResult.marketValueNote,
-            recommendation: newRecommendation,
-          });
-        } else {
-          console.log("0 issues from Claude, keeping procedural");
-          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+    void (async () => {
+      // Ověř platbu přes Stripe API před voláním Claude
+      try {
+        const verification = await verifyStripeSession({ data: { sessionId } });
+        if (!verification.paid) {
+          console.error("Payment not verified for session:", sessionId);
+          return;
         }
-      })
-      .catch((err) => {
-        console.error("Claude error:", err);
-        setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-      });
+      } catch (err) {
+        console.error("Stripe session verification failed:", err);
+        return;
+      }
 
-    setClaudePromise(promise);
+      updateHistoryEntry(reportId, { unlocked: true });
+      setAnalysis({ ...entry, unlocked: true });
+      setPhase("unlocking");
+      window.scrollTo({ top: 0 });
+
+      const promise = analyzeVehicle({
+        data: {
+          listingText: entry.listingText ?? "",
+          make: entry.vehicle.make,
+          model: entry.vehicle.model,
+          year: entry.vehicle.year,
+          engineType: entry.engineType,
+          mileage: entry.vehicle.mileage,
+          askingPrice: entry.askingPrice,
+        },
+      })
+        .then((aiResult) => {
+          console.log("Claude done, issues:", aiResult.issues.length);
+          if (aiResult.issues.length > 0) {
+            const newRecommendation = generateRecommendation(
+              entry.vehicle,
+              aiResult.issues,
+              entry.askingPrice
+            );
+            const upgraded: AnalysisState = {
+              ...entry,
+              unlocked: true,
+              issues: aiResult.issues,
+              sellerRedFlags: aiResult.sellerRedFlags,
+              marketValueNote: aiResult.marketValueNote,
+              recommendation: newRecommendation,
+            };
+            setAnalysis(upgraded);
+            updateHistoryEntry(reportId, {
+              unlocked: true,
+              issues: aiResult.issues,
+              sellerRedFlags: aiResult.sellerRedFlags,
+              marketValueNote: aiResult.marketValueNote,
+              recommendation: newRecommendation,
+            });
+          } else {
+            console.log("0 issues from Claude, keeping procedural");
+            setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+          }
+        })
+        .catch((err) => {
+          console.error("Claude error:", err);
+          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+        });
+
+      setClaudePromise(promise);
+    })();
   }, []);
 
   const handleAnalyze = async (data: LandingSubmit) => {
