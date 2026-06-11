@@ -177,6 +177,7 @@ function Index() {
           engineType: entry.engineType,
           mileage: entry.vehicle.mileage,
           askingPrice: entry.askingPrice,
+          sessionId,
         },
       })
         .then((aiResult) => {

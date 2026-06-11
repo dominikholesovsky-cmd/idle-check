@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
 import type { Issue, Category, Severity, Urgency } from "@/lib/ghost/types";
 
 const InputSchema = z.object({
@@ -12,6 +14,7 @@ const InputSchema = z.object({
     engineType: z.string().optional().nullable(),
     mileage: z.number().nullable(),
     askingPrice: z.number().optional(),
+    sessionId: z.string().optional(),
   }).optional(),
   listingText: z.string().optional(),
   make: z.string().optional(),
@@ -20,6 +23,7 @@ const InputSchema = z.object({
   engineType: z.string().optional().nullable(),
   mileage: z.number().nullable().optional(),
   askingPrice: z.number().optional(),
+  sessionId: z.string().optional(),
 });
 
 function sanitizeInput(text: string): string {
@@ -49,6 +53,29 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     const engineType = input?.engineType ?? null;
     const mileage = input?.mileage ?? null;
     const askingPrice = input?.askingPrice ?? null;
+    const sessionId = input?.sessionId;
+
+    // Rate limit: 1 call per Stripe session — prevent credit drain on repeated calls
+    if (
+      sessionId &&
+      process.env.UPSTASH_REDIS_REST_URL &&
+      process.env.UPSTASH_REDIS_REST_TOKEN
+    ) {
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+      const ratelimit = new Ratelimit({
+        redis,
+        limiter: Ratelimit.fixedWindow(1, "24 h"),
+        prefix: "idle-check:analyze",
+      });
+      const { success } = await ratelimit.limit(sessionId);
+      if (!success) {
+        console.warn("analyzeVehicle: rate limit exceeded for session", sessionId);
+        throw new Error("Rate limit exceeded: this report has already been generated.");
+      }
+    }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.log("analyzeVehicle: no API key");
