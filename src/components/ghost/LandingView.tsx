@@ -104,6 +104,10 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
   const [manualText, setManualText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinError, setVinError] = useState<string | null>(null);
+  const [pendingVinDecode, setPendingVinDecode] = useState<{ model: string; year: string } | null>(null);
+
   // Load makes on mount
   useEffect(() => {
     supabase
@@ -166,6 +170,67 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         setLoadingEngines(false);
       });
   }, [selectedModelId]);
+
+  // Apply pending VIN decode once models finish loading
+  useEffect(() => {
+    if (!pendingVinDecode || loadingModels || models.length === 0) return;
+    const { model: nhtsaModel, year: nhtsaYear } = pendingVinDecode;
+    setPendingVinDecode(null);
+
+    const matched = models.find(
+      (m) => m.display_name.toLowerCase() === nhtsaModel.toLowerCase()
+    );
+    if (matched) {
+      handleModelChange(matched.display_name);
+    }
+    if (nhtsaYear) setYear(nhtsaYear);
+  }, [models, loadingModels, pendingVinDecode]);
+
+  const decodeVin = async (rawVin: string) => {
+    setVinError(null);
+    setVinLoading(true);
+    try {
+      const res = await fetch(
+        `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${rawVin}?format=json`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!res.ok) throw new Error("NHTSA API unavailable");
+      const json = await res.json();
+
+      const get = (variable: string) =>
+        (json.Results as { Variable: string; Value: string | null }[]).find(
+          (r) => r.Variable === variable
+        )?.Value ?? "";
+
+      const nhtsaMake = get("Make");
+      const nhtsaModel = get("Model");
+      const nhtsaYear = get("Model Year");
+      const errorCode = get("Error Code");
+
+      if (errorCode !== "0" || !nhtsaMake || !nhtsaModel) {
+        setVinError("VIN not found — check for typos or enter vehicle details manually.");
+        setVinLoading(false);
+        return;
+      }
+
+      const matchedMake = makes.find(
+        (m) => m.display_name.toLowerCase() === nhtsaMake.toLowerCase()
+      );
+
+      if (matchedMake) {
+        handleMakeChange(matchedMake.display_name);
+        setPendingVinDecode({ model: nhtsaModel, year: nhtsaYear });
+      } else {
+        // Make not in our DB — set year at least
+        if (nhtsaYear) setYear(nhtsaYear);
+        setVinError(`"${nhtsaMake}" not in our database — select make/model manually.`);
+      }
+    } catch {
+      setVinError("Could not decode VIN — check your connection and try again.");
+    } finally {
+      setVinLoading(false);
+    }
+  };
 
   const handleMakeChange = (val: string) => {
     const found = makes.find((m) => m.display_name === val);
@@ -354,22 +419,42 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 </label>
                 <NhtsaStatus />
               </div>
-              <Input
-                value={vin}
-                onChange={(e) =>
-                  setVin(e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ""))
-                }
-                placeholder="e.g. JN1AZ4EH0FM123456"
-                maxLength={17}
-                className="font-mono text-[13px] tracking-wider transition-colors focus-visible:border-primary focus-visible:ring-0"
-              />
-              {vin.length > 0 && vin.length !== 17 && (
+              <div className="relative">
+                <Input
+                  value={vin}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "");
+                    setVin(val);
+                    setVinError(null);
+                    if (val.length === 17) decodeVin(val);
+                  }}
+                  onBlur={() => {
+                    if (vin.length === 17) decodeVin(vin);
+                  }}
+                  placeholder="e.g. JN1AZ4EH0FM123456"
+                  maxLength={17}
+                  className="font-mono text-[13px] tracking-wider transition-colors focus-visible:border-primary focus-visible:ring-0"
+                  disabled={vinLoading}
+                />
+                {vinLoading && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="h-4 w-4 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                  </span>
+                )}
+              </div>
+              {vin.length > 0 && vin.length !== 17 && !vinLoading && (
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {17 - vin.length} characters remaining
                 </p>
               )}
-              {vin.length === 17 && (
-                <p className="mt-1 text-[11px] text-emerald-600">✓ Valid VIN length</p>
+              {vin.length === 17 && !vinLoading && !vinError && (
+                <p className="mt-1 text-[11px] text-emerald-600">✓ VIN decoded</p>
+              )}
+              {vinError && (
+                <p className="mt-1 text-[11px] text-primary">{vinError}</p>
               )}
             </div>
           </div>
