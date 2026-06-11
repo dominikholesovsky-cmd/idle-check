@@ -394,7 +394,7 @@ export function ReportView({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {shareId && !isSharedView && (
+                  {shareId && (
                     <Button
                       onClick={() => setShowShareModal(true)}
                       variant="outline"

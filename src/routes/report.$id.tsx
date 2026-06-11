@@ -29,6 +29,7 @@ export const Route = createFileRoute("/report/$id")({
 
 function SharedReport() {
   const { report } = Route.useLoaderData();
+  const { id } = Route.useParams();
 
   if (!report) {
     return (
@@ -63,6 +64,7 @@ function SharedReport() {
           marketValueNote={report.marketValueNote}
           recallSource={report.recallSource}
           onNewReport={() => { window.location.href = "/"; }}
+          shareId={id}
           isSharedView
         />
       </main>
