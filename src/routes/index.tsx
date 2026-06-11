@@ -11,6 +11,7 @@ import { analyzeVehicle } from "@/lib/api/analyzeVehicle";
 import { fetchRecalls } from "@/lib/api/fetchRecalls";
 import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
 import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
+import { saveReport } from "@/lib/api/saveReport";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -108,6 +109,7 @@ function Index() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [animationReady, setAnimationReady] = useState(false);
   const [claudePromise, setClaudePromise] = useState<Promise<void>>(RESOLVED_PROMISE);
+  const [shareId, setShareId] = useState<string | null>(null);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
@@ -310,6 +312,7 @@ function Index() {
     setAnalyzeError(null);
     setAnimationReady(false);
     setClaudePromise(RESOLVED_PROMISE);
+    setShareId(null);
     pendingEntryRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -358,6 +361,10 @@ function Index() {
             onDone={() => {
               setPhase("report");
               window.scrollTo({ top: 0 });
+              // Save report to Supabase for shareable URL
+              void saveReport({ data: { reportJson: analysis as unknown as Record<string, unknown> } })
+                .then((result) => setShareId(result.id))
+                .catch((err) => console.error("Failed to save report for sharing:", err));
             }}
             claudePromise={claudePromise}
           />
@@ -375,6 +382,7 @@ function Index() {
             marketValueNote={analysis.marketValueNote}
             recallSource={analysis.recallSource}
             onNewReport={goHome}
+            shareId={shareId ?? undefined}
           />
         )}
       </main>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { PlusCircle, AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown } from "lucide-react";
+import { PlusCircle, AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
   recommendation, onNewReport,
   sellerRedFlags, marketValueNote, recallSource,
+  shareId, isSharedView,
 }: {
   vehicle: Vehicle;
   marketplace: string;
@@ -26,10 +27,13 @@ export function ReportView({
   sellerRedFlags?: string[];
   marketValueNote?: string;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
+  shareId?: string;
+  isSharedView?: boolean;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState<string>("verdict");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const ids = ["section-verdict", "section-issues", "section-negotiation", "section-recalls"];
@@ -385,15 +389,34 @@ export function ReportView({
                     ${displayPrice.toLocaleString()}
                   </div>
                 </div>
-                <Button
-                  onClick={exportPdf}
-                  variant="outline"
-                  size="sm"
-                  className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-                >
-                  <FileDown className="h-3.5 w-3.5" />
-                  Export PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                  {shareId && !isSharedView && (
+                    <Button
+                      onClick={() => {
+                        const url = `${window.location.origin}/report/${shareId}`;
+                        navigator.clipboard.writeText(url).then(() => {
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        });
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Share2 className="h-3.5 w-3.5" />}
+                      {copied ? "Copied!" : "Share"}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={exportPdf}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                    Export PDF
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
