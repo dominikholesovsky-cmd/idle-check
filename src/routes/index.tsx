@@ -364,12 +364,15 @@ function Index() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const isDark = phase !== "report";
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
+    <div className={`relative flex min-h-screen flex-col ${isDark ? "bg-zinc-950 text-white" : "bg-background text-foreground"}`}>
       <Navbar
         onLogoClick={phase !== "landing" ? goHome : undefined}
         showNewReport={phase === "report"}
         onNewReport={goHome}
+        dark={isDark}
       />
       <main className="relative z-10 flex-1">
         {phase === "landing" && (
@@ -429,7 +432,7 @@ function Index() {
           />
         )}
       </main>
-      <Footer />
+      <Footer dark={isDark} />
     </div>
   );
 }

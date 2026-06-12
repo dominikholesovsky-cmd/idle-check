@@ -1,10 +1,10 @@
 import { Instagram } from "lucide-react";
 
-export function Footer() {
+export function Footer({ dark }: { dark?: boolean }) {
   return (
-    <footer className="relative z-10 mt-4 border-t border-border bg-background">
+    <footer className={`relative z-10 mt-4 border-t ${dark ? "border-white/10 bg-zinc-950" : "border-border bg-background"}`}>
       <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-muted-foreground">
+        <div className={`flex flex-wrap items-center justify-between gap-3 text-[11px] ${dark ? "text-zinc-500" : "text-muted-foreground"}`}>
           <span className="font-condensed uppercase tracking-wider">
             Idle Check™ · For informational purposes only · Always verify with a licensed mechanic
           </span>
@@ -12,14 +12,14 @@ export function Footer() {
             <a
               href="#"
               aria-label="Instagram"
-              className="transition-colors hover:text-foreground"
+              className={`transition-colors ${dark ? "hover:text-white" : "hover:text-foreground"}`}
             >
               <Instagram className="h-3.5 w-3.5" />
             </a>
             <span>·</span>
-            <a href="/privacy" className="transition-colors hover:text-foreground">Privacy Policy</a>
+            <a href="/privacy" className={`transition-colors ${dark ? "hover:text-white" : "hover:text-foreground"}`}>Privacy Policy</a>
             <span>·</span>
-            <a href="/terms" className="transition-colors hover:text-foreground">Terms of Service</a>
+            <a href="/terms" className={`transition-colors ${dark ? "hover:text-white" : "hover:text-foreground"}`}>Terms of Service</a>
           </div>
         </div>
       </div>

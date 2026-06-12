@@ -5,16 +5,20 @@ import { Footer } from "@/components/ghost/Footer";
 import { Navbar } from "@/components/ghost/Navbar";
 import type { AnalysisState } from "@/routes/index";
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
+function getSupabase() {
+  const url = import.meta.env.VITE_SUPABASE_URL ?? process.env["VITE_SUPABASE_URL"];
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY ?? process.env["VITE_SUPABASE_ANON_KEY"];
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export const Route = createFileRoute("/report/$id")({
   head: () => ({
     meta: [{ title: "Shared Report — Idle Check" }],
   }),
   loader: async ({ params }) => {
+    const supabase = getSupabase();
+    if (!supabase) return { report: null };
     const { data, error } = await supabase
       .from("reports")
       .select("report_json")
