@@ -117,18 +117,9 @@ function Index() {
   const [shareId, setShareId] = useState<string | null>(null);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
+  const pendingShareIdRef = useRef<string | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
-
-  // Refresh recovery: if no session_id in URL but active share exists → go straight to report
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("session_id")) return; // payment flow handles this
-    const activeShare = sessionStorage.getItem("idlecheck_active_share");
-    if (activeShare) {
-      window.location.replace(`/report/${activeShare}`);
-    }
-  }, []);
 
   // Scanning → preview po animaci
   useEffect(() => {
@@ -152,28 +143,10 @@ function Index() {
     if (!sessionId || !reportId) return;
 
     void (async () => {
-      // Guard 1: sessionStorage cache — already processed this session
-      const cachedShareId = sessionStorage.getItem(`idlecheck_session_${sessionId}`);
-      if (cachedShareId) {
-        window.history.replaceState({}, "", "/");
-        window.location.replace(`/report/${cachedShareId}`);
-        return;
-      }
-
-      // Guard 2: claude-called dedup within same tab
-      const callKey = `claude-called-${reportId}`;
-      if (sessionStorage.getItem(callKey)) {
-        console.log("Already called for this reportId, skipping");
-        return;
-      }
-
-      // Guard 3: Supabase check — report may already be saved (e.g. refresh mid-unlocking)
+      // Guard: Supabase check — report already saved (refresh, revisit, cross-device)
       try {
         const existing = await loadReportBySession({ data: { sessionId } });
         if (existing?.shareId) {
-          sessionStorage.setItem(`idlecheck_session_${sessionId}`, existing.shareId);
-          sessionStorage.setItem("idlecheck_active_share", existing.shareId);
-          window.history.replaceState({}, "", "/");
           window.location.replace(`/report/${existing.shareId}`);
           return;
         }
@@ -181,7 +154,6 @@ function Index() {
         // Non-fatal — proceed with Claude
       }
 
-      sessionStorage.setItem(callKey, "1");
       window.history.replaceState({}, "", "/");
 
       const hist = loadHistory();
@@ -226,7 +198,7 @@ function Index() {
           sessionId,
         },
       })
-        .then((aiResult) => {
+        .then(async (aiResult) => {
           console.log("Claude done, issues:", aiResult.issues.length);
           if (aiResult.issues.length > 0) {
             const newRecommendation = generateRecommendation(
@@ -250,15 +222,15 @@ function Index() {
               marketValueNote: aiResult.marketValueNote,
               recommendation: newRecommendation,
             });
-            void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
-              .then((saved) => {
-                sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
-                sessionStorage.setItem("idlecheck_active_share", saved.id);
-                setShareId(saved.id);
-                updateHistoryEntry(reportId, { shareId: saved.id });
-                return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
-              })
-              .catch((err) => console.error("Post-report tasks failed:", err));
+            try {
+              const saved = await saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } });
+              pendingShareIdRef.current = saved.id;
+              setShareId(saved.id);
+              updateHistoryEntry(reportId, { shareId: saved.id });
+              void sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
+            } catch (err) {
+              console.error("Save failed:", err);
+            }
           } else {
             console.log("0 issues from Claude, keeping procedural");
             setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
@@ -379,7 +351,7 @@ function Index() {
         forceRetry: true,
       },
     })
-      .then((aiResult) => {
+      .then(async (aiResult) => {
         if (aiResult.issues.length > 0) {
           const newRecommendation = generateRecommendation(entry.vehicle, aiResult.issues, entry.askingPrice);
           const upgraded: AnalysisState = {
@@ -398,15 +370,15 @@ function Index() {
             marketValueNote: aiResult.marketValueNote,
             recommendation: newRecommendation,
           });
-          void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
-            .then((saved) => {
-              sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
-              sessionStorage.setItem("idlecheck_active_share", saved.id);
-              setShareId(saved.id);
-              updateHistoryEntry(entry.reportId, { shareId: saved.id });
-              return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
-            })
-            .catch((err) => console.error("Post-report tasks failed:", err));
+          try {
+            const saved = await saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } });
+            pendingShareIdRef.current = saved.id;
+            setShareId(saved.id);
+            updateHistoryEntry(entry.reportId, { shareId: saved.id });
+            void sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
+          } catch (err) {
+            console.error("Save failed:", err);
+          }
         } else {
           setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
         }
@@ -420,8 +392,6 @@ function Index() {
   };
 
   const goHome = () => {
-    // Clear active share so the recovery redirect doesn't kick in for the new session
-    sessionStorage.removeItem("idlecheck_active_share");
     setPhase("landing");
     setAnalysis(null);
     setAnalyzeError(null);
@@ -474,8 +444,15 @@ function Index() {
         {phase === "unlocking" && analysis && (
           <PaymentLoadingView
             onDone={() => {
-              setPhase("report");
-              window.scrollTo({ top: 0 });
+              const sid = pendingShareIdRef.current;
+              pendingShareIdRef.current = null;
+              if (sid) {
+                window.location.replace(`/report/${sid}`);
+              } else {
+                // Fallback: no shareId (0 issues case or save failed)
+                setPhase("report");
+                window.scrollTo({ top: 0 });
+              }
             }}
             claudePromise={claudePromise}
             hasError={claudeError}
