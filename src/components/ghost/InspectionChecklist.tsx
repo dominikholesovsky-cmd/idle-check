@@ -19,16 +19,16 @@ const SOURCE_COLORS: Record<IssuePart["source"], string> = {
   RockAuto: "text-blue-400",
   "eBay Motors": "text-amber-400",
   "OEM Dealer": "text-emerald-400",
-  Estimated: "text-muted-foreground",
+  Estimated: "text-zinc-400",
 };
 
 function SeverityPill({ severity }: { severity: Severity }) {
   const cls =
     severity === "HIGH"
-      ? "bg-primary text-primary-foreground"
+      ? "bg-red-700 text-white"
       : severity === "MED"
       ? "bg-amber-500 text-white"
-      : "bg-zinc-200 text-zinc-700";
+      : "bg-zinc-700 text-zinc-200";
   return (
     <span
       className={`inline-flex h-5 min-w-[42px] items-center justify-center rounded-sm px-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider ${cls}`}
@@ -41,10 +41,10 @@ function SeverityPill({ severity }: { severity: Severity }) {
 function PartsSection({ parts }: { parts: IssuePart[] }) {
   if (!parts || parts.length === 0) return null;
   return (
-    <div className="mt-3 rounded-lg border border-border bg-background/60 p-3">
+    <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900 p-3">
       <div className="mb-2 flex items-center gap-1.5">
-        <Package className="h-3 w-3 text-muted-foreground" />
-        <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Package className="h-3 w-3 text-zinc-400" />
+        <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
           Parts & Pricing
         </span>
       </div>
@@ -53,11 +53,11 @@ function PartsSection({ parts }: { parts: IssuePart[] }) {
           <li key={i} className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13px] font-medium text-foreground">
+                <span className="text-[13px] font-medium text-white">
                   {part.name}
                 </span>
                 {part.partNumber && (
-                  <span className="font-mono text-[11px] text-muted-foreground">
+                  <span className="font-mono text-[11px] text-zinc-400">
                     #{part.partNumber}
                   </span>
                 )}
@@ -81,7 +81,7 @@ function PartsSection({ parts }: { parts: IssuePart[] }) {
               </div>
             </div>
             {part.priceUsd != null && (
-              <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-foreground">
+              <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-white">
                 ${part.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             )}
@@ -107,7 +107,7 @@ function Row({
   const hasParts = Array.isArray(issue.parts) && issue.parts.length > 0;
 
   return (
-    <li className={`py-3 ${isRecommended && !isChecked ? "bg-primary/[0.03]" : ""}`}>
+    <li className={`py-3 ${isRecommended && !isChecked ? "bg-red-950/20" : ""}`}>
       <div className="flex items-center gap-3">
         <SeverityPill severity={issue.severity} />
         <Checkbox
@@ -122,7 +122,7 @@ function Row({
           className="flex flex-1 items-center justify-between gap-3 text-left"
         >
           <span className="flex items-center gap-2">
-            <span className={`text-[14px] ${isChecked ? "text-foreground" : "text-foreground/85"}`}>
+            <span className={`text-[14px] ${isChecked ? "text-white" : "text-zinc-300"}`}>
               {issue.label}
             </span>
             {isRecommended && (
@@ -140,10 +140,10 @@ function Row({
           <span className="flex items-center gap-2 shrink-0">
             <span className="font-mono text-[13px] font-semibold tabular-nums">
               ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
-              <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-muted-foreground">parts</span>
+              <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-zinc-400">parts</span>
             </span>
             <ChevronDown
-              className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+              className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${
                 open ? "rotate-180" : ""
               }`}
             />
@@ -153,18 +153,18 @@ function Row({
 
       {open && (
         <div className="mt-2 pl-[78px] pr-2 view-fade-in">
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-[13px] leading-relaxed text-zinc-400">
             {issue.explanation}
           </p>
           {hasParts && <PartsSection parts={issue.parts!} />}
-          <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-400">
             <span>
-              Parts: <span className="font-mono font-semibold text-foreground">
+              Parts: <span className="font-mono font-semibold text-white">
                 ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
               </span>
             </span>
             <span>
-              Labour: <span className="font-mono font-semibold text-foreground">
+              Labour: <span className="font-mono font-semibold text-white">
                 {issue.labourHours}h @ $120/hr
               </span>
             </span>
@@ -199,7 +199,7 @@ export function InspectionChecklist({
           <AccordionItem
             key={cat}
             value={cat}
-            className="rounded-lg border border-border bg-card px-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 shadow-[0_2px_24px_rgba(0,0,0,0.18)]"
           >
             <AccordionTrigger className="py-4 text-left hover:no-underline">
               <div className="flex w-full items-center justify-between gap-3 pr-2">
@@ -218,13 +218,13 @@ export function InspectionChecklist({
                     </span>
                   )}
                 </span>
-                <span className="font-mono text-[11px] text-muted-foreground">
+                <span className="font-mono text-[11px] text-zinc-400">
                   {items.length} CHECKS
                 </span>
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-zinc-800">
                 {items.map((issue) => (
                   <Row
                     key={issue.id}
