@@ -129,21 +129,10 @@
   }
 
   html, body {
-    background-color: var(--color-background);
+    background-color: #f5f4f0;
+    background-image: radial-gradient(circle, #d1cdc7 1px, transparent 1px);
+    background-size: 24px 24px;
     color: var(--color-foreground);
-  }
-
-  /* Faint diagonal graph paper grid texture, 2% opacity */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-      repeating-linear-gradient(45deg, rgba(17,17,17,0.04) 0 1px, transparent 1px 24px),
-      repeating-linear-gradient(-45deg, rgba(17,17,17,0.04) 0 1px, transparent 1px 24px);
-    opacity: 0.5;
   }
 }
 

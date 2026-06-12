@@ -299,6 +299,23 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         </div>
 
         <div className="mt-5 h-[2px] w-[60px] bg-primary" />
+
+        {/* Marketplace badges */}
+        <div className="mt-6">
+          <p className="mb-2 font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            Works with
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {["Facebook Marketplace", "Craigslist", "AutoTrader", "eBay Motors", "OfferUp", "CarGurus"].map((p) => (
+              <span
+                key={p}
+                className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-400"
+              >
+                {p}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Right column — form */}
@@ -369,12 +386,20 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 }}
                 placeholder="e.g. JN1AZ4EH0FM123456"
                 maxLength={17}
-                className="h-12 border-gray-200 bg-white font-mono text-[14px] tracking-widest text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                className={`h-12 bg-white font-mono text-[14px] tracking-widest text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:ring-0 ${
+                  vinLoading
+                    ? "border-blue-400 focus-visible:border-blue-400"
+                    : decodedSummary && !vinError
+                    ? "border-green-500 focus-visible:border-green-500"
+                    : vinError
+                    ? "border-red-400 focus-visible:border-red-400"
+                    : "border-gray-200 focus-visible:border-primary"
+                }`}
                 disabled={vinLoading}
               />
               {vinLoading && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg className="h-4 w-4 animate-spin text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 animate-spin text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
@@ -389,13 +414,13 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
               </p>
             )}
             {decodedSummary && !vinError && (
-              <div className="mt-2 flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-[12px] font-medium text-emerald-600">{decodedSummary} decoded</span>
+              <div className="view-fade-in mt-2 flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                <span className="text-[12px] font-semibold text-green-600">✓ {decodedSummary} decoded</span>
               </div>
             )}
             {vinError && (
-              <p className="mt-1.5 text-[11px] text-primary">{vinError}</p>
+              <p className="view-fade-in mt-1.5 text-[11px] font-medium text-red-500">✗ {vinError}</p>
             )}
             <p className="mt-2 text-[11px] text-zinc-500">
               Found on the dashboard (driver's side), door jamb sticker, or insurance card.
