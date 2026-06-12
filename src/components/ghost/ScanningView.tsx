@@ -56,7 +56,7 @@ export function ScanningView({
 
   return (
     <section className="view-fade-in relative z-10 mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
-      <div className="rounded-xl border border-border bg-[#0a0a0a] p-6 font-mono text-sm shadow-2xl sm:p-8">
+      <div className="rounded-xl border border-zinc-800 bg-[#0a0a0a] p-6 font-mono text-sm shadow-2xl sm:p-8">
         <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-xs uppercase tracking-wider text-white/60">
           <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
           <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
