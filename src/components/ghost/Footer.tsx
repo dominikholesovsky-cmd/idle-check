@@ -2,9 +2,9 @@ import { Instagram } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="relative z-10 mt-4 border-t border-zinc-800 bg-[#111]">
+    <footer className="relative z-10 mt-4 border-t border-zinc-800 bg-zinc-950">
       <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-500">
           <span className="font-condensed uppercase tracking-wider">
             Idle Check™ · For informational purposes only · Always verify with a licensed mechanic
           </span>

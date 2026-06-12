@@ -9,7 +9,7 @@ interface NavbarProps {
 
 export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-[#1a1a1a]/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-[#f5f4f0]/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <button
           type="button"
@@ -20,9 +20,9 @@ export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps)
               : "cursor-default"
           }`}
         >
-          <span className="text-foreground">IDLE</span>
+          <span className="text-zinc-950">IDLE</span>
           <span className="mx-1.5 text-[#9CA3AF]">//</span>
-          <span className="text-foreground">CHECK</span>
+          <span className="text-zinc-950">CHECK</span>
         </button>
 
         <div className="flex items-center gap-4">
@@ -44,12 +44,12 @@ export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps)
               <span className="absolute h-3 w-3 rounded-full bg-green-500/30 sonar-ring delay-2" />
               <span className="relative h-2 w-2 rounded-full bg-green-500" />
             </span>
-            <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground sm:inline sm:text-xs">
+            <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-wider text-zinc-950 sm:inline sm:text-xs">
               <span>IDLE</span>
               <span className="mx-1 text-[#9CA3AF]">//</span>
               <span>ENGINE ACTIVE</span>
             </span>
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground sm:hidden">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-zinc-950 sm:hidden">
               Live
             </span>
           </div>
