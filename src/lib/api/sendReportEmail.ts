@@ -153,7 +153,7 @@ export const sendReportEmail = createServerFn({ method: "POST" })
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
-      from: "Idle Check <onboarding@resend.dev>",
+      from: "Idle Check <noreply@idle-check.com>",
       to: email,
       subject: `Your Idle Check report — ${vehicle}`,
       html: buildHtml(report, shareUrl),
