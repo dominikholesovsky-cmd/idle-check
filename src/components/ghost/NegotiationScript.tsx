@@ -70,18 +70,18 @@ export function NegotiationScript({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] sm:p-6">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 shadow-[0_2px_24px_rgba(0,0,0,0.18)] sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em]">
+          <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-white">
             Negotiation Script
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-zinc-400">
             Auto-generated. Updates live as you check inspection items.
           </p>
         </div>
         <div className="text-right">
-          <div className="font-condensed text-[11px] uppercase tracking-wider text-muted-foreground">
+          <div className="font-condensed text-[11px] uppercase tracking-wider text-zinc-400">
             Your Cash Offer
           </div>
           <div className="font-mono text-2xl font-bold tabular-nums text-primary">
@@ -92,14 +92,14 @@ export function NegotiationScript({
       <Textarea
         readOnly
         value={script}
-        className="mt-4 min-h-56 resize-none text-[14px] leading-relaxed"
+        className="mt-4 min-h-56 resize-none border-zinc-700 bg-zinc-900 text-zinc-200 placeholder:text-zinc-500 text-[14px] leading-relaxed focus-visible:border-primary focus-visible:ring-0"
       />
       <Button
         onClick={handleCopy}
         className={`cta-active mt-4 h-12 w-full text-sm font-semibold tracking-wide transition-colors ${
           copied
             ? "bg-green-600 text-white hover:bg-green-600"
-            : "bg-primary text-primary-foreground hover:bg-primary/90"
+            : "bg-red-700 text-white hover:bg-red-600"
         }`}
       >
         {copied ? (
