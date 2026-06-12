@@ -10,7 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportError } from "../lib/error-reporting";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -39,7 +39,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -81,16 +81,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Idle Check — Inspect any used car listing before you go see it" },
       { name: "description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
       { name: "author", content: "Idle Check" },
-      { property: "og:title", content: "Idle Check — Inspect any used car listing before you go see it" },
-      { property: "og:description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
+      { property: "og:title", content: "Idle Check — Know what you're buying" },
+      { property: "og:description", content: "AI-powered used car inspection. Repair costs, NHTSA recalls, and a negotiation script — in seconds." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "Idle Check — Inspect any used car listing before you go see it" },
-      { name: "twitter:description", content: "Paste any used car listing. Get the inspection checklist, repair cost ranges, NHTSA recalls, and a ready-to-send negotiation message — in seconds." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/p3p0Oj3t3dZuKLeVLy6k62MkXAt2/social-images/social-1780913215336-header.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/p3p0Oj3t3dZuKLeVLy6k62MkXAt2/social-images/social-1780913215336-header.webp" },
+      { property: "og:url", content: "https://idle-check.com" },
+      { property: "og:image", content: "https://idle-check.com/og-image.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Idle Check — Know what you're buying" },
+      { name: "twitter:description", content: "AI-powered used car inspection. Repair costs, NHTSA recalls, and a negotiation script — in seconds." },
+      { name: "twitter:image", content: "https://idle-check.com/og-image.png" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
       {
         rel: "stylesheet",
         href: appCss,

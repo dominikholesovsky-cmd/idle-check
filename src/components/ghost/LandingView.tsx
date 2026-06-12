@@ -301,7 +301,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         <div className="mt-5 h-[2px] w-[60px] bg-primary" />
 
         {/* Marketplace badges */}
-        <div className="mt-6">
+        <div className="mb-8 mt-6 md:mb-0">
           <p className="mb-2 font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
             Works with
           </p>
@@ -319,7 +319,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       </div>
 
       {/* Right column — form */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:mt-0 sm:p-8">
 
       {/* Recent Reports */}
       {history.length > 0 && (
