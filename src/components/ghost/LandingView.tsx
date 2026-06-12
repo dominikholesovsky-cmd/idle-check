@@ -77,7 +77,7 @@ function Select({
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
     </div>
   );
 }
@@ -279,7 +279,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         >
           IDLE<br />CHECK
         </h1>
-        <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
+        <p className="mt-5 max-w-xl text-base text-zinc-400 sm:text-lg">
           Know what you're buying before you show up. Inspection checklist, repair costs, NHTSA recalls, and a negotiation script — in seconds.
         </p>
 
@@ -290,7 +290,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             "Live NHTSA recall data",
             "Negotiation script included",
           ].map((item) => (
-            <span key={item} className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+            <span key={item} className="flex items-center gap-1.5 text-[12px] text-zinc-400">
               <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary/70" />
               {item}
             </span>
@@ -304,8 +304,8 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       {history.length > 0 && (
         <div className="mt-10">
           <div className="mb-3 flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 text-zinc-400" />
+            <span className="font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
               Recent Reports
             </span>
           </div>
@@ -318,15 +318,15 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40"
                 >
                   <div>
-                    <span className="block text-[14px] font-medium text-foreground">
+                    <span className="block text-[14px] font-medium text-zinc-200">
                       {entry.vehicle.year} {entry.vehicle.make} {entry.vehicle.model}
                       {entry.vehicle.trim ? ` (${entry.vehicle.trim})` : ""}
                     </span>
-                    <span className="block text-[12px] text-muted-foreground">
+                    <span className="block text-[12px] text-zinc-400">
                       ${entry.askingPrice.toLocaleString()} · {entry.marketplace} · {timeAgo(entry.timestamp)}
                     </span>
                   </div>
-                  <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  <ChevronRight className="ml-3 h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                 </button>
               </li>
             ))}
@@ -342,12 +342,12 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
           {/* VIN — primary entry */}
           <div className="p-5 pb-4">
             <div className="mb-1 flex items-center justify-between gap-3">
-              <label className="block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
+              <label className="block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-200">
                 Vehicle Identification Number (VIN)
               </label>
               <NhtsaStatus />
             </div>
-            <p className="mb-3 text-[12px] text-muted-foreground">
+            <p className="mb-3 text-[12px] text-zinc-400">
               Have a VIN? Start here — we'll fill in make, model, and year automatically.
             </p>
             <div className="relative">
@@ -370,7 +370,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
               />
               {vinLoading && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg className="h-4 w-4 animate-spin text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 animate-spin text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
@@ -380,7 +380,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
             {/* VIN feedback */}
             {vin.length > 0 && vin.length < 17 && !vinLoading && (
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
+              <p className="mt-1.5 text-[11px] text-zinc-400">
                 {17 - vin.length} more characters
               </p>
             )}
@@ -393,7 +393,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {vinError && (
               <p className="mt-1.5 text-[11px] text-primary">{vinError}</p>
             )}
-            <p className="mt-2 text-[11px] text-muted-foreground/70">
+            <p className="mt-2 text-[11px] text-zinc-500">
               Found on the dashboard (driver's side), door jamb sticker, or insurance card.
             </p>
           </div>
@@ -407,7 +407,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {/* Make + Model */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                   Make <span className="text-primary">*</span>
                 </label>
                 <Select
@@ -419,7 +419,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 />
               </div>
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                   Model <span className="text-primary">*</span>
                 </label>
                 <Select
@@ -436,7 +436,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {/* Year + Mileage */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                   Year <span className="text-primary">*</span>
                 </label>
                 <Input
@@ -450,7 +450,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 />
               </div>
               <div>
-                <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                   Mileage
                   <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
                 </label>
@@ -464,17 +464,17 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                     max={999999}
                     className="border-zinc-700 bg-zinc-900 pr-8 text-white placeholder:text-zinc-500 transition-colors focus-visible:border-primary focus-visible:ring-0"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                     mi
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] text-muted-foreground/70">Affects wear estimates significantly</p>
+                <p className="mt-1 text-[10px] text-zinc-500">Affects wear estimates significantly</p>
               </div>
             </div>
 
             {/* Engine */}
             <div>
-              <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                 Engine
                 <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
               </label>
@@ -486,7 +486,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 disabled={!model}
                 loading={loadingEngines}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground/70">Required for accurate repair costs</p>
+              <p className="mt-1 text-[10px] text-zinc-500">Required for accurate repair costs</p>
             </div>
 
           </div>
@@ -494,11 +494,11 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
         {/* Asking price */}
         <div>
-          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
+          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-200">
             Asking Price (USD) <span className="text-primary">*</span>
           </label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-semibold text-muted-foreground">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-semibold text-zinc-400">
               $
             </span>
             <Input
@@ -516,9 +516,9 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
         {/* Listing text */}
         <div>
-          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
+          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-200">
             Listing Text
-            <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground">
+            <span className="ml-1.5 font-normal normal-case tracking-normal text-zinc-400">
               — optional but recommended
             </span>
           </label>
@@ -529,7 +529,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             className="min-h-[140px] resize-y border-zinc-700 bg-zinc-900 p-4 text-[14px] leading-relaxed text-white placeholder:text-zinc-500 shadow-[0_2px_12px_rgba(0,0,0,0.3)] transition-colors focus-visible:border-primary focus-visible:ring-0"
             maxLength={8000}
           />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
+          <p className="mt-1.5 text-[11px] text-zinc-400">
             Works with Facebook Marketplace, Craigslist, OfferUp, eBay Motors, AutoTrader, and more.
           </p>
         </div>
@@ -548,7 +548,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
           Run Inspection Analysis
         </Button>
 
-        <p className="text-center text-[12px] text-muted-foreground">
+        <p className="text-center text-[12px] text-zinc-400">
           First 3 issues always free · Full report $4.99 · No account required
         </p>
       </div>
