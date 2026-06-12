@@ -543,7 +543,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         <Button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="cta-active h-14 w-full bg-primary text-base font-semibold uppercase tracking-wide text-primary-foreground shadow-[0_4px_20px_rgba(178,34,34,0.22)] transition hover:bg-primary/90 disabled:opacity-40"
+          className="cta-active h-14 w-full bg-red-700 text-base font-semibold uppercase tracking-wide text-white shadow-[0_4px_20px_rgba(178,34,34,0.35)] transition hover:bg-red-600 disabled:bg-red-950 disabled:text-red-800 disabled:opacity-100"
         >
           Run Inspection Analysis
         </Button>
