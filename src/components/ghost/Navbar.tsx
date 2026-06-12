@@ -31,7 +31,7 @@ export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps)
               onClick={onNewReport}
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+              className="h-8 gap-1.5 border-gray-200 font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
             >
               <PlusCircle className="h-3.5 w-3.5" />
               New Report

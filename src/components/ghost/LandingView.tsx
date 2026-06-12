@@ -263,7 +263,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
     : null;
 
   return (
-    <section className="view-fade-in relative z-10 min-h-screen bg-[#f5f4f0] text-zinc-950">
+    <section className="view-fade-in relative z-10 min-h-screen bg-[#f5f4f0] text-zinc-900">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 md:grid md:grid-cols-2 md:gap-12 md:items-start">
 
       {/* Hero */}
@@ -302,7 +302,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       </div>
 
       {/* Right column — form */}
-      <div className="rounded-2xl bg-white p-6 shadow-md sm:p-8">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
 
       {/* Recent Reports */}
       {history.length > 0 && (
@@ -322,7 +322,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   className="group flex w-full items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left transition-colors hover:border-primary/40"
                 >
                   <div>
-                    <span className="block text-[14px] font-medium text-zinc-950">
+                    <span className="block text-[14px] font-medium text-zinc-900">
                       {entry.vehicle.year} {entry.vehicle.make} {entry.vehicle.model}
                       {entry.vehicle.trim ? ` (${entry.vehicle.trim})` : ""}
                     </span>
@@ -498,7 +498,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
         {/* Asking price */}
         <div>
-          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950">
+          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-900">
             Asking Price (USD) <span className="text-primary">*</span>
           </label>
           <div className="relative">
@@ -520,7 +520,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
         {/* Listing text */}
         <div>
-          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-950">
+          <label className="mb-2 block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-900">
             Listing Text
             <span className="ml-1.5 font-normal normal-case tracking-normal text-zinc-500">
               — optional but recommended

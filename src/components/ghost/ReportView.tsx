@@ -329,7 +329,7 @@ export function ReportView({
       </div>
 
       {/* Fixed left sidebar */}
-      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-zinc-800 bg-zinc-950 lg:block">
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-gray-200 bg-[#f5f4f0] lg:block">
         <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
           <div
             className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
@@ -349,8 +349,8 @@ export function ReportView({
                   onClick={() => scrollToSection(item.id)}
                   className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                     active
-                      ? "border-primary text-primary"
-                      : "border-transparent text-zinc-300 hover:text-white"
+                      ? "border-red-700 text-red-700"
+                      : "border-transparent text-zinc-600 hover:text-zinc-900"
                   }`}
                 >
                   {item.label}

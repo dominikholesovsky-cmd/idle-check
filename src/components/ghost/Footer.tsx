@@ -12,14 +12,14 @@ export function Footer() {
             <a
               href="#"
               aria-label="Instagram"
-              className="transition-colors hover:text-foreground"
+              className="transition-colors hover:text-zinc-200"
             >
               <Instagram className="h-3.5 w-3.5" />
             </a>
             <span>·</span>
-            <a href="/privacy" className="transition-colors hover:text-foreground">Privacy Policy</a>
+            <a href="/privacy" className="transition-colors hover:text-zinc-200">Privacy Policy</a>
             <span>·</span>
-            <a href="/terms" className="transition-colors hover:text-foreground">Terms of Service</a>
+            <a href="/terms" className="transition-colors hover:text-zinc-200">Terms of Service</a>
           </div>
         </div>
       </div>

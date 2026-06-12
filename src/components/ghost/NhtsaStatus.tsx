@@ -28,7 +28,7 @@ export function NhtsaStatus({ className = "" }: { className?: string }) {
       ? { dot: "bg-emerald-500", ring: "bg-emerald-500/30", label: `NHTSA LIVE${latency ? ` · ${latency}ms` : ""}`, text: "text-emerald-700" }
       : status === "offline"
       ? { dot: "bg-zinc-400", ring: "bg-zinc-400/20", label: "NHTSA OFFLINE", text: "text-zinc-500" }
-      : { dot: "bg-zinc-300", ring: "bg-zinc-300/30", label: "CHECKING NHTSA…", text: "text-muted-foreground" };
+      : { dot: "bg-zinc-300", ring: "bg-zinc-300/30", label: "CHECKING NHTSA…", text: "text-zinc-500" };
 
   return (
     <span
