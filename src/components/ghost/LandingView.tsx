@@ -66,9 +66,9 @@ function Select({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled || loading}
-        className={`w-full appearance-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 pr-8 text-[14px] text-white transition-colors focus:border-primary focus:outline-none ${
+        className={`w-full appearance-none rounded-md border border-gray-200 bg-white px-3 py-2 pr-8 text-[14px] text-zinc-900 transition-colors focus:border-primary focus:outline-none ${
           disabled || loading ? "cursor-not-allowed opacity-40" : "cursor-pointer"
-        } ${!value ? "text-zinc-500" : "text-white"}`}
+        } ${!value ? "text-zinc-400" : "text-zinc-900"}`}
       >
         <option value="" disabled>
           {loading ? "Loading..." : placeholder}
@@ -341,7 +341,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       <div className="mt-8 space-y-5">
 
         {/* VIN + vehicle fields */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50/50">
+        <div className="rounded-xl border border-gray-200 bg-white">
 
           {/* VIN — primary entry */}
           <div className="p-5 pb-4">
@@ -369,7 +369,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 }}
                 placeholder="e.g. JN1AZ4EH0FM123456"
                 maxLength={17}
-                className="h-12 border-gray-200 bg-gray-50 font-mono text-[14px] tracking-widest text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                className="h-12 border-gray-200 bg-white font-mono text-[14px] tracking-widest text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                 disabled={vinLoading}
               />
               {vinLoading && (
@@ -450,7 +450,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   placeholder="e.g. 2004"
                   min={1970}
                   max={2026}
-                  className="border-gray-200 bg-gray-50 text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                  className="border-gray-200 bg-whitetext-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                 />
               </div>
               <div>
@@ -466,7 +466,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                     placeholder="e.g. 87000"
                     min={0}
                     max={999999}
-                    className="border-gray-200 bg-gray-50 pr-8 text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                    className="border-gray-200 bg-whitepr-8 text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                   />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                     mi
@@ -513,7 +513,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
               min={0}
               max={1_000_000}
               step={100}
-              className="h-12 border-gray-200 bg-gray-50 pl-9 font-mono text-base text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+              className="h-12 border-gray-200 bg-whitepl-9 font-mono text-base text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
             />
           </div>
         </div>
@@ -530,7 +530,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
             placeholder="Paste the full listing description here. The more detail you give us, the deeper we can dig — condition notes, what the seller mentions and what they suspiciously don't."
-            className="min-h-[140px] resize-y border-gray-200 bg-gray-50 p-4 text-[14px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
+            className="min-h-[140px] resize-y border-gray-200 bg-whitep-4 text-[14px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
             maxLength={8000}
           />
           <p className="mt-1.5 text-[11px] text-zinc-500">
