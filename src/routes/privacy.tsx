@@ -30,7 +30,7 @@ function PrivacyPolicy() {
             </h2>
             <p>
               Idle Check ("we", "us", "our") is an independent vehicle research tool that helps
-              used car buyers analyze listings before purchase. We are operated by Dominik Holešovský, reachable at dominik.holesovsky@gmail.com.
+              used car buyers analyze listings before purchase. We are operated by Dominik Holešovský, reachable at idlecheckapp@gmail.com.
             </p>
           </section>
 
@@ -114,7 +114,7 @@ function PrivacyPolicy() {
               we collect, request deletion of your data, and opt out of any sale of personal
               information. We do not sell personal information. Because we do not collect names or
               email addresses, most CCPA rights can be fulfilled by clearing your browser's
-              localStorage. For any other requests, contact us at dominik.holesovsky@gmail.com.
+              localStorage. For any other requests, contact us at idlecheckapp@gmail.com.
             </p>
           </section>
 
@@ -156,8 +156,8 @@ function PrivacyPolicy() {
             </h2>
             <p>
               For privacy-related questions or requests, contact us at{" "}
-              <a href="mailto:dominik.holesovsky@gmail.com" className="text-primary hover:underline">
-                dominik.holesovsky@gmail.com
+              <a href="mailto:idlecheckapp@gmail.com" className="text-primary hover:underline">
+                idlecheckapp@gmail.com
               </a>.
             </p>
           </section>

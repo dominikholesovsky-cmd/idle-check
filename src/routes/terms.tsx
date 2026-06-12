@@ -92,7 +92,7 @@ function TermsOfService() {
               Full reports are available for a one-time payment of $4.99 USD, processed by
               Stripe. Payments are non-refundable once the full report has been delivered, except
               where required by applicable law. If you experience a technical issue preventing
-              report delivery, contact us at dominik.holesovsky@gmail.com within 7 days for a full refund.
+              report delivery, contact us at idlecheckapp@gmail.com within 7 days for a full refund.
             </p>
           </section>
 
@@ -169,8 +169,8 @@ function TermsOfService() {
             </h2>
             <p>
               For questions about these Terms, contact us at{" "}
-              <a href="mailto:dominik.holesovsky@gmail.com" className="text-primary hover:underline">
-                dominik.holesovsky@gmail.com
+              <a href="mailto:idlecheckapp@gmail.com" className="text-primary hover:underline">
+                idlecheckapp@gmail.com
               </a>.
             </p>
           </section>

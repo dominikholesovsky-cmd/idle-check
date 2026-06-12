@@ -12,7 +12,7 @@ const UNLOCK_LINES = [
   "Report unlocked.",
 ];
 
-const SUPPORT_EMAIL = "dominik.holesovsky@gmail.com";
+const SUPPORT_EMAIL = "idlecheckapp@gmail.com";
 
 export function PaymentLoadingView({
   onDone,
