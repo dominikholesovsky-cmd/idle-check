@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { AlertCircle, RotateCcw, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const UNLOCK_LINES = [
   "Verifying payment with Stripe...",
@@ -10,12 +12,20 @@ const UNLOCK_LINES = [
   "Report unlocked.",
 ];
 
+const SUPPORT_EMAIL = "dominik.holesovsky@gmail.com";
+
 export function PaymentLoadingView({
   onDone,
   claudePromise,
+  hasError,
+  onRetry,
+  retryCount = 0,
 }: {
   onDone: () => void;
   claudePromise: Promise<void>;
+  hasError: boolean;
+  onRetry: () => void;
+  retryCount?: number;
 }) {
   const [visible, setVisible] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
@@ -28,18 +38,15 @@ export function PaymentLoadingView({
 
   useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
 
-  // Poslouchej na Claude Promise
   useEffect(() => {
     claudePromise.then(() => {
-      console.log("claudePromise resolved");
       setClaudeDone(true);
     }).catch(() => {
-      console.log("claudePromise rejected — using procedural");
       setClaudeDone(true);
     });
   }, [claudePromise]);
 
-  // Typewriter animace
+  // Typewriter animation
   useEffect(() => {
     if (animDone) return;
     if (lineIdx >= UNLOCK_LINES.length) { setAnimDone(true); return; }
@@ -61,17 +68,18 @@ export function PaymentLoadingView({
     return () => clearTimeout(t);
   }, [lineIdx, charIdx, animDone]);
 
-  // Přejdi na report až jsou hotové obě podmínky
+  // Transition to report only when both done AND no error
   useEffect(() => {
-    if (animDone && claudeDone && !firedRef.current) {
+    if (animDone && claudeDone && !hasError && !firedRef.current) {
       firedRef.current = true;
-      console.log("Both done — calling onDone");
       const t = setTimeout(() => onDoneRef.current(), 400);
       return () => clearTimeout(t);
     }
-  }, [animDone, claudeDone]);
+  }, [animDone, claudeDone, hasError]);
 
   const waiting = animDone && !claudeDone;
+  const showError = animDone && claudeDone && hasError;
+  const isPermanent = retryCount >= 1;
   const isFinalLine = (s: string) => s === "Report unlocked.";
 
   return (
@@ -120,6 +128,48 @@ export function PaymentLoadingView({
           )}
         </div>
       </div>
+
+      {/* Error state — shown below terminal after animation completes */}
+      {showError && (
+        <div className="view-fade-in mt-6 rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+            <div className="flex-1">
+              {isPermanent ? (
+                <>
+                  <p className="font-semibold text-zinc-900">Analysis failed twice — we'll refund your payment.</p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Something is wrong on our end. Reply to your receipt or email us and we'll refund you within 24 hours.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-zinc-900">Analysis failed — please try again.</p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    The AI analysis didn't complete. Your payment was captured. One retry is available at no extra charge.
+                  </p>
+                </>
+              )}
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=Idle Check analysis failed`}
+                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:underline"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {SUPPORT_EMAIL}
+              </a>
+            </div>
+          </div>
+          {!isPermanent && (
+            <Button
+              onClick={onRetry}
+              className="mt-4 w-full bg-red-800 text-white hover:bg-red-700"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Try again
+            </Button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

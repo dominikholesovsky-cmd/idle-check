@@ -15,6 +15,7 @@ const InputSchema = z.object({
     mileage: z.number().nullable(),
     askingPrice: z.number().optional(),
     sessionId: z.string().optional(),
+    forceRetry: z.boolean().optional(),
   }).optional(),
   listingText: z.string().optional(),
   make: z.string().optional(),
@@ -24,6 +25,7 @@ const InputSchema = z.object({
   mileage: z.number().nullable().optional(),
   askingPrice: z.number().optional(),
   sessionId: z.string().optional(),
+  forceRetry: z.boolean().optional(),
 });
 
 function sanitizeInput(text: string): string {
@@ -54,10 +56,13 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     const mileage = input?.mileage ?? null;
     const askingPrice = input?.askingPrice ?? null;
     const sessionId = input?.sessionId;
+    const forceRetry = input?.forceRetry ?? false;
 
     // Rate limit: 1 call per Stripe session — prevent credit drain on repeated calls
+    // forceRetry=true bypasses the check for legitimate retries after a confirmed failure
     if (
       sessionId &&
+      !forceRetry &&
       process.env.UPSTASH_REDIS_REST_URL &&
       process.env.UPSTASH_REDIS_REST_TOKEN
     ) {

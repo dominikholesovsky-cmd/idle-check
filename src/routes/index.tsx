@@ -111,8 +111,11 @@ function Index() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [animationReady, setAnimationReady] = useState(false);
   const [claudePromise, setClaudePromise] = useState<Promise<void>>(RESOLVED_PROMISE);
+  const [claudeError, setClaudeError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [shareId, setShareId] = useState<string | null>(null);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
+  const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -204,7 +207,11 @@ function Index() {
       updateHistoryEntry(reportId, { unlocked: true });
       setAnalysis({ ...entry, unlocked: true });
       setPhase("unlocking");
+      setClaudeError(false);
       window.scrollTo({ top: 0 });
+
+      // Store context so retry can re-use same session + entry
+      activeSessionRef.current = { sessionId, entry };
 
       const promise = analyzeVehicle({
         data: {
@@ -258,7 +265,7 @@ function Index() {
         })
         .catch((err) => {
           console.error("Claude error:", err);
-          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+          setClaudeError(true);
         });
 
       setClaudePromise(promise);
@@ -351,6 +358,65 @@ function Index() {
     }
   };
 
+  const handleRetry = () => {
+    const ctx = activeSessionRef.current;
+    if (!ctx) return;
+    const { sessionId, entry } = ctx;
+    setClaudeError(false);
+    setRetryCount((c) => c + 1);
+
+    const promise = analyzeVehicle({
+      data: {
+        listingText: entry.listingText ?? "",
+        make: entry.vehicle.make,
+        model: entry.vehicle.model,
+        year: entry.vehicle.year,
+        engineType: entry.engineType,
+        mileage: entry.vehicle.mileage,
+        askingPrice: entry.askingPrice,
+        sessionId,
+        forceRetry: true,
+      },
+    })
+      .then((aiResult) => {
+        if (aiResult.issues.length > 0) {
+          const newRecommendation = generateRecommendation(entry.vehicle, aiResult.issues, entry.askingPrice);
+          const upgraded: AnalysisState = {
+            ...entry,
+            unlocked: true,
+            issues: aiResult.issues,
+            sellerRedFlags: aiResult.sellerRedFlags,
+            marketValueNote: aiResult.marketValueNote,
+            recommendation: newRecommendation,
+          };
+          setAnalysis(upgraded);
+          updateHistoryEntry(entry.reportId, {
+            unlocked: true,
+            issues: aiResult.issues,
+            sellerRedFlags: aiResult.sellerRedFlags,
+            marketValueNote: aiResult.marketValueNote,
+            recommendation: newRecommendation,
+          });
+          void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
+            .then((saved) => {
+              sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
+              sessionStorage.setItem("idlecheck_active_share", saved.id);
+              setShareId(saved.id);
+              return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
+            })
+            .catch((err) => console.error("Post-report tasks failed:", err));
+        } else {
+          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+        }
+      })
+      .catch((err) => {
+        console.error("Retry failed:", err);
+        setClaudeError(true);
+      });
+
+    setClaudePromise(promise);
+  };
+
   const goHome = () => {
     // Clear active share so the recovery redirect doesn't kick in for the new session
     sessionStorage.removeItem("idlecheck_active_share");
@@ -359,8 +425,11 @@ function Index() {
     setAnalyzeError(null);
     setAnimationReady(false);
     setClaudePromise(RESOLVED_PROMISE);
+    setClaudeError(false);
+    setRetryCount(0);
     setShareId(null);
     pendingEntryRef.current = null;
+    activeSessionRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -410,6 +479,9 @@ function Index() {
               window.scrollTo({ top: 0 });
             }}
             claudePromise={claudePromise}
+            hasError={claudeError}
+            onRetry={handleRetry}
+            retryCount={retryCount}
           />
         )}
 

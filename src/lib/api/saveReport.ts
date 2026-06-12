@@ -23,5 +23,13 @@ export const saveReport = createServerFn({ method: "POST" })
 
     if (error) throw new Error(`Failed to save report: ${error.message}`);
 
-    return { id: row.id as string };
+    const shareId = row.id as string;
+
+    // Embed shareId into report_json so it survives future loads via /report/:id
+    await supabase
+      .from("reports")
+      .update({ report_json: { ...data.reportJson, shareId } })
+      .eq("id", shareId);
+
+    return { id: shareId };
   });
