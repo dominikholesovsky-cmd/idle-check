@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link as RouterLink } from "@tanstack/react-router";
 import { PlusCircle, AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -337,9 +338,9 @@ export function ReportView({
           />
         </div>
         <div className="flex h-full flex-col px-5 py-6">
-          <div className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-primary">
+          <RouterLink to="/" className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-70">
             IDLE CHECK
-          </div>
+          </RouterLink>
           <nav className="mt-10 flex flex-col gap-1">
             {navItems.map((item) => {
               const active = activeSection === item.id;

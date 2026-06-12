@@ -34,7 +34,7 @@ function SharedReport() {
   if (!report) {
     return (
       <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-        <Navbar />
+        <Navbar onNewReport={() => { window.location.href = "/"; }} />
         <main className="flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <p className="text-lg font-semibold">Report not found</p>
@@ -51,7 +51,7 @@ function SharedReport() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar />
+      <Navbar onNewReport={() => { window.location.href = "/"; }} />
       <main className="relative z-10 flex-1">
         <ReportView
           vehicle={report.vehicle}

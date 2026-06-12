@@ -1,32 +1,23 @@
 import { PlusCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
-  onLogoClick?: () => void;
-  showNewReport?: boolean;
   onNewReport?: () => void;
 }
 
-export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps) {
+export function Navbar({ onNewReport }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-[#f5f4f0]/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <button
-          type="button"
-          onClick={onLogoClick}
-          className={`font-mono text-sm font-bold uppercase tracking-tight sm:text-base ${
-            onLogoClick
-              ? "cursor-pointer transition-opacity hover:opacity-70"
-              : "cursor-default"
-          }`}
-        >
+        <Link to="/" className="font-mono text-sm font-bold uppercase tracking-tight transition-opacity hover:opacity-70 sm:text-base">
           <span className="text-zinc-950">IDLE</span>
           <span className="mx-1.5 text-[#9CA3AF]">//</span>
           <span className="text-zinc-950">CHECK</span>
-        </button>
+        </Link>
 
         <div className="flex items-center gap-4">
-          {showNewReport && (
+          {onNewReport && (
             <Button
               onClick={onNewReport}
               variant="outline"

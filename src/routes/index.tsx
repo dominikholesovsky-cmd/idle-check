@@ -435,11 +435,7 @@ function Index() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#f5f4f0] text-zinc-950">
-      <Navbar
-        onLogoClick={phase !== "landing" ? goHome : undefined}
-        showNewReport={phase === "report"}
-        onNewReport={goHome}
-      />
+      <Navbar onNewReport={phase !== "landing" ? goHome : undefined} />
       <main className="relative z-10 flex-1">
         {phase === "landing" && (
           <LandingView
