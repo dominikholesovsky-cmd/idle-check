@@ -350,7 +350,7 @@ export function ReportView({
                   className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                     active
                       ? "border-primary text-primary"
-                      : "border-transparent text-zinc-400 hover:text-white"
+                      : "border-transparent text-zinc-300 hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -368,25 +368,25 @@ export function ReportView({
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                   Full Report Unlocked
                 </div>
                 <div className="mt-1 text-base font-bold sm:text-lg">
                   {vehicleName}
                   {vehicle.engineType && (
-                    <span className="ml-2 font-condensed text-[13px] font-normal text-zinc-400">
+                    <span className="ml-2 font-condensed text-[13px] font-normal text-zinc-300">
                       {vehicle.engineType}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[12px] text-zinc-400">
+                <div className="mt-0.5 text-[12px] text-zinc-300">
                   {mileageStr && <>{mileageStr} · </>}Asked on {marketplace || "Unknown"}
                   {vehicle.vin && <span className="ml-2 font-mono text-[11px]">VIN: {vehicle.vin}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
                     Asking Price
                   </div>
                   <div className="font-mono text-xl font-bold tabular-nums">
@@ -427,9 +427,9 @@ export function ReportView({
           {/* Market value */}
           {hasMarketNote && (
             <div className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
-              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-300" />
               <div>
-                <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
                   Market Value
                 </span>
                 <p className="mt-0.5 text-[13px] leading-relaxed text-white">{marketValueNote}</p>
@@ -461,11 +461,11 @@ export function ReportView({
           <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                   Inspection Checklist
                 </h2>
                 {recommendedIds.size > 0 && (
-                  <span className="font-condensed text-[11px] text-zinc-400">
+                  <span className="font-condensed text-[11px] text-zinc-300">
                     <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
                     {recommendedIds.size} recommended
                   </span>
@@ -484,7 +484,7 @@ export function ReportView({
                 checked={checked}
                 askingPrice={displayPrice}
               />
-              <p className="mt-2 px-1 text-[11px] text-zinc-400">
+              <p className="mt-2 px-1 text-[11px] text-zinc-300">
                 Tip: click a category to expand. Tick items to update the budget.
               </p>
             </aside>
@@ -510,7 +510,7 @@ export function ReportView({
               </span>
             </div>
             {recalls.length === 0 ? (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-center text-sm text-zinc-400">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-center text-sm text-zinc-300">
                 No recall records found for this vehicle.
               </div>
             ) : (
@@ -534,12 +534,12 @@ export function ReportView({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
               <div>
-                <p className="font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Share Report</p>
+                <p className="font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">Share Report</p>
                 <p className="mt-0.5 text-sm font-semibold text-white">{vehicleName}</p>
               </div>
               <button
                 onClick={() => setShowShareModal(false)}
-                className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                className="rounded-md p-1 text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -563,7 +563,7 @@ export function ReportView({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">{copiedLink ? "Copied!" : "Copy link"}</p>
-                  <p className="text-[11px] text-zinc-400">Share via any app or message</p>
+                  <p className="text-[11px] text-zinc-300">Share via any app or message</p>
                 </div>
               </button>
 
@@ -577,7 +577,7 @@ export function ReportView({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Email</p>
-                  <p className="text-[11px] text-zinc-400">Opens your email app</p>
+                  <p className="text-[11px] text-zinc-300">Opens your email app</p>
                 </div>
               </a>
 

@@ -13,7 +13,7 @@ export function RecallSection({ recalls }: { recalls: Recall[] }) {
 
       <div className="mt-5 overflow-hidden rounded-lg border border-zinc-800">
         <table className="w-full text-left text-[13px]">
-          <thead className="bg-zinc-900 font-condensed text-[11px] uppercase tracking-wider text-zinc-400">
+          <thead className="bg-zinc-900 font-condensed text-[11px] uppercase tracking-wider text-zinc-300">
             <tr>
               <th className="px-4 py-2.5 font-semibold">Recall Date</th>
               <th className="px-4 py-2.5 font-semibold">Component</th>
@@ -42,7 +42,7 @@ export function RecallSection({ recalls }: { recalls: Recall[] }) {
         </table>
       </div>
 
-      <p className="mt-3 text-[11px] text-zinc-500">
+      <p className="mt-3 text-[11px] text-zinc-400">
         Recall data is pulled from the NHTSA public database. Always verify current recall status at
         nhtsa.gov.
       </p>

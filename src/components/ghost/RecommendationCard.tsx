@@ -10,7 +10,7 @@ import type { Issue, ReportRecommendation, Urgency } from "@/lib/ghost/types";
 const URGENCY_CONFIG: Record<Urgency, { icon: typeof Clock; color: string; accent: string }> = {
   Immediate: { icon: XCircle, color: "text-primary", accent: "border-l-primary" },
   Soon: { icon: Wrench, color: "text-amber-600", accent: "border-l-amber-500" },
-  Monitor: { icon: Eye, color: "text-zinc-400", accent: "border-l-zinc-600" },
+  Monitor: { icon: Eye, color: "text-zinc-300", accent: "border-l-zinc-600" },
 };
 
 const VERDICT_CONFIG = {
@@ -28,7 +28,7 @@ export function RecommendationCard({
 }) {
   if (!recommendation || !recommendation.verdict) {
     return (
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 text-center text-sm text-zinc-400">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 text-center text-sm text-zinc-300">
         Generating recommendation details...
       </div>
     );
@@ -50,7 +50,7 @@ export function RecommendationCard({
             <h3 className="mt-1 text-lg font-extrabold tracking-tight text-white">
               {recommendation.headline || "No Headline Provided"}
             </h3>
-            <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
+            <p className="mt-2 text-[14px] leading-relaxed text-zinc-300">
               {recommendation.summary || "No details available."}
             </p>
           </div>
@@ -59,7 +59,7 @@ export function RecommendationCard({
 
       {Array.isArray(recommendation.roadmap) && recommendation.roadmap.length > 0 && (
         <div>
-          <h3 className="mb-3 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+          <h3 className="mb-3 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
             Maintenance Roadmap
           </h3>
           <Accordion type="multiple" defaultValue={[]} className="space-y-2">
@@ -87,19 +87,19 @@ export function RecommendationCard({
                           {group.label || "Notice"}
                         </span>
                       </span>
-                      <span className="font-mono text-[11px] text-zinc-400">
+                      <span className="font-mono text-[11px] text-zinc-300">
                         {groupIssues.length} {groupIssues.length === 1 ? "item" : "items"}
                       </span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <p className="mb-3 text-[12px] text-zinc-400">{group.reason}</p>
+                    <p className="mb-3 text-[12px] text-zinc-300">{group.reason}</p>
                     {groupIssues.length > 0 && (
                       <ul className="divide-y divide-zinc-800 rounded-md border border-zinc-800">
                         {groupIssues.map((issue) => (
                           <li key={issue.id} className="flex items-center justify-between px-3 py-2.5">
                             <span className="text-[13px] font-medium text-white">{issue.label}</span>
-                            <span className="font-mono text-[12px] text-zinc-400">
+                            <span className="font-mono text-[12px] text-zinc-300">
                               ${issue.costMin?.toLocaleString() || 0} – ${issue.costMax?.toLocaleString() || 0}
                             </span>
                           </li>

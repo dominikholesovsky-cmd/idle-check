@@ -30,13 +30,13 @@ export function RepairCostTracker({
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-      <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+      <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
         Estimated US Repair Budget
       </div>
       <div className="mt-2 font-mono text-3xl font-bold tabular-nums text-white sm:text-4xl">
         ${grandTotal.toLocaleString()}
       </div>
-      <div className="mt-1 font-condensed text-[11px] uppercase tracking-wider text-zinc-400">
+      <div className="mt-1 font-condensed text-[11px] uppercase tracking-wider text-zinc-300">
         {count} {count === 1 ? "item" : "items"} flagged
       </div>
 
@@ -45,7 +45,7 @@ export function RepairCostTracker({
           <div className="flex items-start justify-between gap-3 text-[13px]">
             <div>
               <span className="font-medium text-white">Parts only</span>
-              <p className="mt-0.5 text-[11px] text-zinc-400">
+              <p className="mt-0.5 text-[11px] text-zinc-300">
                 Sourced from RockAuto / eBay Motors
               </p>
             </div>
@@ -55,12 +55,12 @@ export function RepairCostTracker({
           </div>
           <div className="flex items-start justify-between gap-3 text-[13px]">
             <div>
-              <span className="font-medium text-zinc-400">Labour estimate</span>
-              <p className="mt-0.5 text-[11px] text-zinc-400">
+              <span className="font-medium text-zinc-300">Labour estimate</span>
+              <p className="mt-0.5 text-[11px] text-zinc-300">
                 @ ${LABOUR_RATE}/hr · varies by shop
               </p>
             </div>
-            <span className="shrink-0 font-mono font-semibold text-zinc-400">
+            <span className="shrink-0 font-mono font-semibold text-zinc-300">
               ~${labourRounded.toLocaleString()}
             </span>
           </div>
@@ -74,12 +74,12 @@ export function RepairCostTracker({
       )}
 
       {count === 0 && (
-        <p className="mt-4 text-[12px] text-zinc-400">
+        <p className="mt-4 text-[12px] text-zinc-300">
           Tick items in the checklist to build your repair budget.
         </p>
       )}
 
-      <div className="mt-4 border-t border-zinc-800 pt-3 text-[13px] text-zinc-400">
+      <div className="mt-4 border-t border-zinc-800 pt-3 text-[13px] text-zinc-300">
         Suggested opening offer:{" "}
         <span className="font-mono font-semibold text-white">
           ${suggestedOffer.toLocaleString()}

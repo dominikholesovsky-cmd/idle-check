@@ -302,7 +302,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       </div>
 
       {/* Right column — form */}
-      <div>
+      <div className="rounded-2xl bg-white p-6 shadow-md sm:p-8">
 
       {/* Recent Reports */}
       {history.length > 0 && (
@@ -338,20 +338,20 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         </div>
       )}
 
-      <div className="mt-12 space-y-5">
+      <div className="mt-8 space-y-5">
 
-        {/* Main form card */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 shadow-[0_2px_16px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+        {/* VIN + vehicle fields */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50/50">
 
           {/* VIN — primary entry */}
           <div className="p-5 pb-4">
             <div className="mb-1 flex items-center justify-between gap-3">
-              <label className="block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300">
+              <label className="block font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-700">
                 Vehicle Identification Number (VIN)
               </label>
               <NhtsaStatus />
             </div>
-            <p className="mb-3 text-[12px] text-zinc-400">
+            <p className="mb-3 text-[12px] text-zinc-500">
               Have a VIN? Start here — we'll fill in make, model, and year automatically.
             </p>
             <div className="relative">
@@ -369,12 +369,12 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 }}
                 placeholder="e.g. JN1AZ4EH0FM123456"
                 maxLength={17}
-                className="h-12 border-zinc-700 bg-zinc-900 font-mono text-[14px] tracking-widest text-white placeholder:text-zinc-500 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                className="h-12 border-gray-200 bg-gray-50 font-mono text-[14px] tracking-widest text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                 disabled={vinLoading}
               />
               {vinLoading && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg className="h-4 w-4 animate-spin text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 animate-spin text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
@@ -384,7 +384,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
             {/* VIN feedback */}
             {vin.length > 0 && vin.length < 17 && !vinLoading && (
-              <p className="mt-1.5 text-[11px] text-zinc-400">
+              <p className="mt-1.5 text-[11px] text-zinc-500">
                 {17 - vin.length} more characters
               </p>
             )}
@@ -397,13 +397,13 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {vinError && (
               <p className="mt-1.5 text-[11px] text-primary">{vinError}</p>
             )}
-            <p className="mt-2 text-[11px] text-zinc-400">
+            <p className="mt-2 text-[11px] text-zinc-500">
               Found on the dashboard (driver's side), door jamb sticker, or insurance card.
             </p>
           </div>
 
           {/* Divider */}
-          <div className="mx-5 border-t border-zinc-700" />
+          <div className="mx-5 border-t border-gray-200" />
 
           {/* Vehicle detail fields — always visible */}
           <div className="space-y-3 px-5 pb-5 pt-4">
@@ -411,7 +411,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {/* Make + Model */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-700">
                   Make <span className="text-primary">*</span>
                 </label>
                 <Select
@@ -423,7 +423,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 />
               </div>
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-700">
                   Model <span className="text-primary">*</span>
                 </label>
                 <Select
@@ -440,7 +440,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {/* Year + Mileage */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+                <label className="mb-1.5 block font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-700">
                   Year <span className="text-primary">*</span>
                 </label>
                 <Input
@@ -450,11 +450,11 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   placeholder="e.g. 2004"
                   min={1970}
                   max={2026}
-                  className="border-zinc-700 bg-zinc-900 text-white placeholder:text-zinc-500 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                  className="border-gray-200 bg-gray-50 text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                 />
               </div>
               <div>
-                <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+                <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-700">
                   Mileage
                   <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
                 </label>
@@ -466,19 +466,19 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                     placeholder="e.g. 87000"
                     min={0}
                     max={999999}
-                    className="border-zinc-700 bg-zinc-900 pr-8 text-white placeholder:text-zinc-500 transition-colors focus-visible:border-primary focus-visible:ring-0"
+                    className="border-gray-200 bg-gray-50 pr-8 text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                     mi
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] text-zinc-400">Affects wear estimates significantly</p>
+                <p className="mt-1 text-[10px] text-zinc-500">Affects wear estimates significantly</p>
               </div>
             </div>
 
             {/* Engine */}
             <div>
-              <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+              <label className="mb-1.5 flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-700">
                 Engine
                 <span className="rounded px-1 py-px font-condensed text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600">Recommended</span>
               </label>
@@ -490,7 +490,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 disabled={!model}
                 loading={loadingEngines}
               />
-              <p className="mt-1 text-[10px] text-zinc-400">Required for accurate repair costs</p>
+              <p className="mt-1 text-[10px] text-zinc-500">Required for accurate repair costs</p>
             </div>
 
           </div>
@@ -502,7 +502,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             Asking Price (USD) <span className="text-primary">*</span>
           </label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-semibold text-zinc-400">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-base font-semibold text-zinc-500">
               $
             </span>
             <Input
@@ -513,7 +513,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
               min={0}
               max={1_000_000}
               step={100}
-              className="h-12 border-zinc-700 bg-zinc-900 pl-9 font-mono text-base text-white placeholder:text-zinc-500 transition-colors focus-visible:border-primary focus-visible:ring-0"
+              className="h-12 border-gray-200 bg-gray-50 pl-9 font-mono text-base text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
             />
           </div>
         </div>
@@ -530,7 +530,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
             placeholder="Paste the full listing description here. The more detail you give us, the deeper we can dig — condition notes, what the seller mentions and what they suspiciously don't."
-            className="min-h-[140px] resize-y border-zinc-700 bg-zinc-900 p-4 text-[14px] leading-relaxed text-white placeholder:text-zinc-500 shadow-[0_2px_12px_rgba(0,0,0,0.3)] transition-colors focus-visible:border-primary focus-visible:ring-0"
+            className="min-h-[140px] resize-y border-gray-200 bg-gray-50 p-4 text-[14px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:border-primary focus-visible:ring-0"
             maxLength={8000}
           />
           <p className="mt-1.5 text-[11px] text-zinc-500">

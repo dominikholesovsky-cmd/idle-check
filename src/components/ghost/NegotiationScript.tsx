@@ -76,12 +76,12 @@ export function NegotiationScript({
           <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-white">
             Negotiation Script
           </h3>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs text-zinc-300">
             Auto-generated. Updates live as you check inspection items.
           </p>
         </div>
         <div className="text-right">
-          <div className="font-condensed text-[11px] uppercase tracking-wider text-zinc-400">
+          <div className="font-condensed text-[11px] uppercase tracking-wider text-zinc-300">
             Your Cash Offer
           </div>
           <div className="font-mono text-2xl font-bold tabular-nums text-primary">

@@ -19,7 +19,7 @@ const SOURCE_COLORS: Record<IssuePart["source"], string> = {
   RockAuto: "text-blue-400",
   "eBay Motors": "text-amber-400",
   "OEM Dealer": "text-emerald-400",
-  Estimated: "text-zinc-400",
+  Estimated: "text-zinc-300",
 };
 
 function SeverityPill({ severity }: { severity: Severity }) {
@@ -43,8 +43,8 @@ function PartsSection({ parts }: { parts: IssuePart[] }) {
   return (
     <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900 p-3">
       <div className="mb-2 flex items-center gap-1.5">
-        <Package className="h-3 w-3 text-zinc-400" />
-        <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+        <Package className="h-3 w-3 text-zinc-300" />
+        <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
           Parts & Pricing
         </span>
       </div>
@@ -57,7 +57,7 @@ function PartsSection({ parts }: { parts: IssuePart[] }) {
                   {part.name}
                 </span>
                 {part.partNumber && (
-                  <span className="font-mono text-[11px] text-zinc-400">
+                  <span className="font-mono text-[11px] text-zinc-300">
                     #{part.partNumber}
                   </span>
                 )}
@@ -140,10 +140,10 @@ function Row({
           <span className="flex items-center gap-2 shrink-0">
             <span className="font-mono text-[13px] font-semibold tabular-nums">
               ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
-              <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-zinc-400">parts</span>
+              <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-zinc-300">parts</span>
             </span>
             <ChevronDown
-              className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${
+              className={`h-3.5 w-3.5 text-zinc-300 transition-transform ${
                 open ? "rotate-180" : ""
               }`}
             />
@@ -153,11 +153,11 @@ function Row({
 
       {open && (
         <div className="mt-2 pl-[78px] pr-2 view-fade-in">
-          <p className="text-[13px] leading-relaxed text-zinc-400">
+          <p className="text-[13px] leading-relaxed text-zinc-300">
             {issue.explanation}
           </p>
           {hasParts && <PartsSection parts={issue.parts!} />}
-          <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-400">
+          <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-300">
             <span>
               Parts: <span className="font-mono font-semibold text-white">
                 ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
@@ -218,7 +218,7 @@ export function InspectionChecklist({
                     </span>
                   )}
                 </span>
-                <span className="font-mono text-[11px] text-zinc-400">
+                <span className="font-mono text-[11px] text-zinc-300">
                   {items.length} CHECKS
                 </span>
               </div>
