@@ -1,4 +1,4 @@
-import { Lock, CreditCard, AlertCircle } from "lucide-react";
+import { CreditCard, AlertCircle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Issue, Vehicle } from "@/lib/ghost/types";
 
@@ -69,14 +69,16 @@ export function FreePreviewView({
         ))}
       </ul>
 
-      {/* Locked items — blurred peek */}
+      {/* Locked peek + unlock overlay — single block */}
       <div className="relative mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        {/* Blurred rows */}
         <ul className="divide-y divide-gray-100">
           {peek.map((p) => (
             <li
               key={p.id}
               className="flex items-center justify-between px-4 py-3 opacity-50 select-none"
-              style={{ filter: "blur(2px)" }}
+              className="flex items-center justify-between px-4 py-3 select-none"
+              style={{ filter: "blur(2px)", opacity: 0.45 }}
             >
               <div className="flex items-center gap-3">
                 <SeverityPill severity={p.severity} />
@@ -88,13 +90,25 @@ export function FreePreviewView({
             </li>
           ))}
         </ul>
-        {/* Gradient fade */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
-        {/* Lock label */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="rounded-full border border-gray-200 bg-white px-4 py-2 font-condensed text-xs font-semibold uppercase tracking-wider text-zinc-600 shadow-sm">
-            {lockedCount} more findings locked
-          </span>
+
+        {/* Frosted overlay with CTA */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl backdrop-blur-[2px] bg-white/60 px-6 py-6">
+          <p className="font-condensed text-sm font-semibold uppercase tracking-wider text-zinc-700">
+            🔒 {lockedCount} more findings locked
+          </p>
+          <div className="font-sans text-3xl font-extrabold tracking-tight text-zinc-900">
+            $4.99
+          </div>
+          <Button
+            onClick={onUnlock}
+            className="cta-active h-12 w-full max-w-xs rounded-xl bg-red-800 text-base font-semibold text-white shadow-md hover:bg-red-700"
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            Unlock Full Report
+          </Button>
+          <p className="text-center text-[11px] text-zinc-500">
+            One-time payment · No subscription · Apple Pay &amp; Card
+          </p>
         </div>
       </div>
 
@@ -105,35 +119,6 @@ export function FreePreviewView({
           {paymentError}
         </div>
       )}
-
-      {/* Unlock card */}
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="text-center">
-          <h3 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">
-            Unlock the full report
-          </h3>
-          <p className="mx-auto mt-3 max-w-md text-[15px] text-zinc-500">
-            Every finding with repair cost ranges, severity levels, and a negotiation message
-            written for this exact car and this exact asking price.
-          </p>
-          <div className="mt-6 font-sans text-5xl font-extrabold tracking-tight text-zinc-900">
-            $4.99
-          </div>
-        </div>
-        <Button
-          onClick={onUnlock}
-          className="cta-active mt-6 h-16 w-full rounded-xl bg-red-700 text-lg font-semibold text-white shadow-md hover:bg-red-600"
-        >
-          <CreditCard className="mr-2 h-5 w-5" />
-          Unlock Full Report — $4.99
-        </Button>
-        <p className="mt-3 text-center text-[13px] text-zinc-500">
-          Unlock full report — $4.99 · See all findings, repair costs &amp; negotiation script
-        </p>
-        <p className="mt-1 text-center text-[11px] text-zinc-400">
-          One-time payment · No subscription · Credit Card · Apple Pay · Google Pay
-        </p>
-      </div>
     </section>
   );
 }
