@@ -93,7 +93,7 @@ export function FreePreviewView({
         {/* Frosted overlay with CTA */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl backdrop-blur-[2px] bg-white/60 px-6 py-6">
           <p className="font-condensed text-sm font-semibold uppercase tracking-wider text-zinc-700">
-            🔒 {lockedCount} more findings locked
+            <Lock className="inline-block h-4 w-4 mr-1 text-zinc-600" />{lockedCount} more findings locked
           </p>
           <div className="font-sans text-3xl font-extrabold tracking-tight text-zinc-900">
             $4.99
