@@ -76,7 +76,6 @@ export function FreePreviewView({
           {peek.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between px-4 py-3 opacity-50 select-none"
               className="flex items-center justify-between px-4 py-3 select-none"
               style={{ filter: "blur(2px)", opacity: 0.45 }}
             >
