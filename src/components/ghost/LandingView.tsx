@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, ChevronRight, ChevronDown, CheckCircle2, Gauge } from "lucide-react";
+import { Clock, ChevronRight, ChevronDown, CheckCircle2, Gauge, MessageSquare } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -589,6 +589,17 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
       </div>{/* end right column */}
       </div>{/* end grid */}
+
+      <p className="mt-10 flex items-center justify-center gap-1.5 text-xs text-zinc-400">
+        <MessageSquare className="h-3 w-3 shrink-0" />
+        Missing your car or engine? Let us know{" "}
+        <a
+          href="mailto:idlecheckapp@gmail.com?subject=Missing car or engine&body=Hi, I could not find my car or engine:"
+          className="underline hover:text-zinc-600"
+        >
+          here
+        </a>
+      </p>
     </section>
   );
 }
