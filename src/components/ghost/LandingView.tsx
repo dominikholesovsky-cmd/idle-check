@@ -263,7 +263,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
     : null;
 
   return (
-    <section className="view-fade-in relative z-10 mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
+    <section className="view-fade-in relative z-10 mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20 bg-zinc-950 text-white">
 
       {/* Hero */}
       <div>
