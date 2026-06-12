@@ -341,7 +341,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       <div className="mt-12 space-y-5">
 
         {/* Main form card */}
-        <div className="rounded-xl border border-border bg-card shadow-[0_2px_16px_rgba(0,0,0,0.07)]">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 shadow-[0_2px_16px_rgba(0,0,0,0.3)] backdrop-blur-sm">
 
           {/* VIN — primary entry */}
           <div className="p-5 pb-4">

@@ -365,7 +365,7 @@ function Index() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
+    <div className="noise-bg relative flex min-h-screen flex-col text-white">
       <Navbar
         onLogoClick={phase !== "landing" ? goHome : undefined}
         showNewReport={phase === "report"}

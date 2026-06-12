@@ -9,7 +9,7 @@ interface NavbarProps {
 
 export function Navbar({ onLogoClick, showNewReport, onNewReport }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-[#1a1a1a]/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <button
           type="button"
