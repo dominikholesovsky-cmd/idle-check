@@ -263,10 +263,11 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
     : null;
 
   return (
-    <section className="view-fade-in relative z-10 mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20 bg-zinc-950 text-white">
+    <section className="view-fade-in relative z-10 min-h-screen bg-zinc-950 text-white">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20 md:grid md:grid-cols-2 md:gap-12 md:items-start">
 
       {/* Hero */}
-      <div>
+      <div className="md:sticky md:top-20">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           <span className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
@@ -299,6 +300,9 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
         <div className="mt-5 h-[2px] w-[60px] bg-primary" />
       </div>
+
+      {/* Right column — form */}
+      <div>
 
       {/* Recent Reports */}
       {history.length > 0 && (
@@ -552,6 +556,9 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
           First 3 issues always free · Full report $4.99 · No account required
         </p>
       </div>
+
+      </div>{/* end right column */}
+      </div>{/* end grid */}
     </section>
   );
 }
