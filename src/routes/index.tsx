@@ -47,6 +47,7 @@ export interface AnalysisState {
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
   listingText?: string;
   engineType?: string;
+  shareId?: string;
 }
 
 const STORAGE_KEY = "idle-check-history";
@@ -251,10 +252,10 @@ function Index() {
             });
             void saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } })
               .then((saved) => {
-                // Persist session → shareId mapping so refresh/revisit recovers the report
                 sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
                 sessionStorage.setItem("idlecheck_active_share", saved.id);
                 setShareId(saved.id);
+                updateHistoryEntry(reportId, { shareId: saved.id });
                 return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
               })
               .catch((err) => console.error("Post-report tasks failed:", err));
@@ -402,6 +403,7 @@ function Index() {
               sessionStorage.setItem(`idlecheck_session_${sessionId}`, saved.id);
               sessionStorage.setItem("idlecheck_active_share", saved.id);
               setShareId(saved.id);
+              updateHistoryEntry(entry.reportId, { shareId: saved.id });
               return sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
             })
             .catch((err) => console.error("Post-report tasks failed:", err));
@@ -445,6 +447,7 @@ function Index() {
               const valid = validateAndMigrateEntry(rawEntry);
               if (valid) {
                 setAnalysis(valid);
+                setShareId(valid.shareId ?? null);
                 setPhase(valid.unlocked ? "report" : "preview");
                 window.scrollTo({ top: 0 });
               }
