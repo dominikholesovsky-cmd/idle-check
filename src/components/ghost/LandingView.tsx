@@ -108,6 +108,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
   const [vinError, setVinError] = useState<string | null>(null);
   const [pendingVinDecode, setPendingVinDecode] = useState<{ model: string; year: string } | null>(null);
   const [vinDecoded, setVinDecoded] = useState(false);
+  const [vinDecodeResult, setVinDecodeResult] = useState<{ make: string; model: string; year: string } | null>(null);
 
   // Load makes on mount (with retry)
   useEffect(() => {
@@ -180,6 +181,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
   const decodeVin = async (rawVin: string) => {
     setVinError(null);
     setVinDecoded(false);
+    setVinDecodeResult(null);
     setVinLoading(true);
     try {
       const res = await fetch(
@@ -210,6 +212,8 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       );
 
       if (matchedMake) {
+        // Show green feedback immediately from NHTSA data — independent of model loading
+        setVinDecodeResult({ make: nhtsaMake, model: nhtsaModel, year: nhtsaYear });
         handleMakeChange(matchedMake.display_name);
         setPendingVinDecode({ model: nhtsaModel, year: nhtsaYear });
       } else {
@@ -258,8 +262,8 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
     });
   };
 
-  const decodedSummary = vinDecoded && make && model && year
-    ? `${year} ${make} ${model}`
+  const decodedSummary = vinDecodeResult
+    ? `${vinDecodeResult.year} ${vinDecodeResult.make} ${vinDecodeResult.model}`.trim()
     : null;
 
   return (
