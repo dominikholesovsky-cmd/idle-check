@@ -106,7 +106,7 @@ export function ReportView({
 
   if (!vehicle) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
+      <div className="p-8 text-center text-zinc-400">
         Loading vehicle data...
       </div>
     );
@@ -124,7 +124,7 @@ export function ReportView({
     ? { label: "Live NHTSA · VIN verified", Icon: ShieldCheck, color: "text-emerald-600" }
     : recallSource === "nhtsa"
     ? { label: "Live NHTSA · Make/Model/Year", Icon: Shield, color: "text-emerald-600" }
-    : { label: "Estimated recall data", Icon: Shield, color: "text-muted-foreground" };
+    : { label: "Estimated recall data", Icon: Shield, color: "text-zinc-400" };
 
   const exportPdf = () => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -329,7 +329,7 @@ export function ReportView({
       </div>
 
       {/* Fixed left sidebar */}
-      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-border bg-card lg:block">
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-zinc-800 bg-zinc-950 lg:block">
         <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
           <div
             className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
@@ -350,7 +350,7 @@ export function ReportView({
                   className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
                     active
                       ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                      : "border-transparent text-zinc-400 hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -365,28 +365,28 @@ export function ReportView({
         <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
 
           {/* Status bar */}
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Full Report Unlocked
                 </div>
                 <div className="mt-1 text-base font-bold sm:text-lg">
                   {vehicleName}
                   {vehicle.engineType && (
-                    <span className="ml-2 font-condensed text-[13px] font-normal text-muted-foreground">
+                    <span className="ml-2 font-condensed text-[13px] font-normal text-zinc-400">
                       {vehicle.engineType}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[12px] text-muted-foreground">
+                <div className="mt-0.5 text-[12px] text-zinc-400">
                   {mileageStr && <>{mileageStr} · </>}Asked on {marketplace || "Unknown"}
                   {vehicle.vin && <span className="ml-2 font-mono text-[11px]">VIN: {vehicle.vin}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                     Asking Price
                   </div>
                   <div className="font-mono text-xl font-bold tabular-nums">
@@ -399,7 +399,7 @@ export function ReportView({
                       onClick={() => setShowShareModal(true)}
                       variant="outline"
                       size="sm"
-                      className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                      className="h-9 gap-1.5 border-zinc-800 font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
                     >
                       <Share2 className="h-3.5 w-3.5" />
                       Share
@@ -409,7 +409,7 @@ export function ReportView({
                     onClick={exportPdf}
                     variant="outline"
                     size="sm"
-                    className="h-9 gap-1.5 border-border font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
+                    className="h-9 gap-1.5 border-zinc-800 font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
                   >
                     <FileDown className="h-3.5 w-3.5" />
                     Export PDF
@@ -426,20 +426,20 @@ export function ReportView({
 
           {/* Market value */}
           {hasMarketNote && (
-            <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
-              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+              <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
               <div>
-                <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                   Market Value
                 </span>
-                <p className="mt-0.5 text-[13px] leading-relaxed text-foreground">{marketValueNote}</p>
+                <p className="mt-0.5 text-[13px] leading-relaxed text-white">{marketValueNote}</p>
               </div>
             </div>
           )}
 
           {/* Red flags */}
           {hasRedFlags && (
-            <div className="rounded-xl border border-border border-l-4 border-l-primary bg-card p-4 sm:p-5">
+            <div className="rounded-xl border border-zinc-800 border-l-4 border-l-primary bg-zinc-950 p-4 sm:p-5">
               <div className="mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-primary" />
                 <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
@@ -450,7 +450,7 @@ export function ReportView({
                 {sellerRedFlags!.map((flag, i) => (
                   <li key={i} className="flex items-start gap-2.5">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <span className="text-[13px] leading-relaxed text-foreground">{flag}</span>
+                    <span className="text-[13px] leading-relaxed text-white">{flag}</span>
                   </li>
                 ))}
               </ul>
@@ -461,11 +461,11 @@ export function ReportView({
           <div id="section-issues" className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   Inspection Checklist
                 </h2>
                 {recommendedIds.size > 0 && (
-                  <span className="font-condensed text-[11px] text-muted-foreground">
+                  <span className="font-condensed text-[11px] text-zinc-400">
                     <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
                     {recommendedIds.size} recommended
                   </span>
@@ -484,7 +484,7 @@ export function ReportView({
                 checked={checked}
                 askingPrice={displayPrice}
               />
-              <p className="mt-2 px-1 text-[11px] text-muted-foreground">
+              <p className="mt-2 px-1 text-[11px] text-zinc-400">
                 Tip: click a category to expand. Tick items to update the budget.
               </p>
             </aside>
@@ -510,7 +510,7 @@ export function ReportView({
               </span>
             </div>
             {recalls.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-center text-sm text-zinc-400">
                 No recall records found for this vehicle.
               </div>
             ) : (
@@ -528,18 +528,18 @@ export function ReportView({
           onClick={() => setShowShareModal(false)}
         >
           <div
-            className="w-full max-w-sm rounded-xl border border-border bg-background shadow-2xl"
+            className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
               <div>
-                <p className="font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Share Report</p>
-                <p className="mt-0.5 text-sm font-semibold text-foreground">{vehicleName}</p>
+                <p className="font-condensed text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Share Report</p>
+                <p className="mt-0.5 text-sm font-semibold text-white">{vehicleName}</p>
               </div>
               <button
                 onClick={() => setShowShareModal(false)}
-                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -556,28 +556,28 @@ export function ReportView({
                     setTimeout(() => setCopiedLink(false), 2000);
                   });
                 }}
-                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+                className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-zinc-800"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
                   {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Link className="h-4 w-4 text-primary" />}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{copiedLink ? "Copied!" : "Copy link"}</p>
-                  <p className="text-[11px] text-muted-foreground">Share via any app or message</p>
+                  <p className="text-sm font-semibold text-white">{copiedLink ? "Copied!" : "Copy link"}</p>
+                  <p className="text-[11px] text-zinc-400">Share via any app or message</p>
                 </div>
               </button>
 
               {/* Email */}
               <a
                 href={`mailto:?subject=${encodeURIComponent("Check this car — Idle Check report")}&body=${encodeURIComponent(`I ran this listing through Idle Check and thought you'd want to see the results:\n\n${shareUrl}`)}`}
-                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+                className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-zinc-800"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
                   <Mail className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Email</p>
-                  <p className="text-[11px] text-muted-foreground">Opens your email app</p>
+                  <p className="text-sm font-semibold text-white">Email</p>
+                  <p className="text-[11px] text-zinc-400">Opens your email app</p>
                 </div>
               </a>
 
@@ -590,7 +590,7 @@ export function ReportView({
                     setTimeout(() => setCopiedInsta(false), 2000);
                   });
                 }}
-                className="flex w-full items-center gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
+                className="flex w-full items-center gap-3 rounded-lg border border-zinc-800 px-4 py-3 text-left transition-colors hover:border-primary/50 hover:bg-zinc-800"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
                   {copiedInsta
@@ -599,8 +599,8 @@ export function ReportView({
                   }
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{copiedInsta ? "Copied!" : "Copy for Instagram"}</p>
-                  <p className="text-[11px] text-muted-foreground">Paste into DM or story caption</p>
+                  <p className="text-sm font-semibold text-white">{copiedInsta ? "Copied!" : "Copy for Instagram"}</p>
+                  <p className="text-[11px] text-zinc-400">Paste into DM or story caption</p>
                 </div>
               </button>
 
