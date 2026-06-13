@@ -105,6 +105,45 @@ function updateHistoryEntry(reportId: string, updates: Partial<AnalysisState>) {
 
 const RESOLVED_PROMISE = Promise.resolve();
 
+// ─── Demo mode ────────────────────────────────────────────────────────────────
+const DEMO_ANALYSIS: AnalysisState = {
+  vehicle: { make: "BMW", model: "330i", year: 2018, mileage: 94000, engineType: "2.0L I4 Turbo B48 248hp", vin: "WBA8E9G50JNU12345" },
+  marketplace: "Facebook Marketplace",
+  askingPrice: 18500,
+  reportId: "demo-report",
+  timestamp: Date.now(),
+  unlocked: true,
+  sellerRedFlags: [
+    "Seller mentions 'just serviced' without providing receipts",
+    "Asking price 12% above market average for this mileage and year",
+    "Listed for 3 weeks with multiple price drops — suggests known issues",
+  ],
+  marketValueNote: "2018 BMW 330i with 94k miles typically sells for $16,200–$17,800 in this condition. Asking price of $18,500 is above market — use repair findings to justify offer of $15,500–$16,000.",
+  recallSource: "nhtsa",
+  recalls: [
+    { id: "demo-recall-1", component: "ENGINE AND ENGINE COOLING", description: "The fuel injector may crack causing fuel leakage which increases the risk of fire.", date: "2019-03-15", status: "Remedied" },
+  ],
+  recommendation: {
+    verdict: "negotiate",
+    headline: "Negotiate Hard — Real Mechanical Concerns Found",
+    summary: "This 2018 BMW 330i has several known weak points for the B48 engine platform that need addressing. The high-pressure fuel pump and timing chain tensioner are the critical items — both are documented issues on this engine family at this mileage. Total estimated repair exposure of $3,780–$7,900 gives you serious negotiating leverage. Open at $15,500 and justify every dollar with the inspection findings.",
+    roadmap: [
+      { urgency: "Immediate", label: "Fuel Pump + Timing Chain", reason: "Both are documented failure points on the B48 at this mileage — address before purchase or negotiate cost off price.", issueIds: ["hpfp_failure", "timing_chain_tensioner"] },
+      { urgency: "Soon", label: "Valve Cover Gasket + Cooling System", reason: "Oil leak and coolant component age — budget $900–$1,600 within the first 6 months.", issueIds: ["valve_cover_gasket", "coolant_system"] },
+      { urgency: "Monitor", label: "Brakes + Plugs", reason: "Maintenance items — verify service history and address at next service interval.", issueIds: ["brake_fluid", "spark_plugs"] },
+    ],
+  },
+  issues: [
+    { id: "hpfp_failure", label: "High-Pressure Fuel Pump Failure", category: "Engine & Drivetrain", severity: "HIGH", costMin: 800, costMax: 1400, partsCostMin: 425, partsCostMax: 600, labourHours: 3, urgency: "Immediate", explanation: "The N20/B48 engine family has a documented HPFP weakness. Symptoms include hard starts, rough idle, and hesitation under load. At 94k miles this is overdue for inspection.", parts: [{ name: "High-Pressure Fuel Pump", partNumber: "13-51-7-616-170", priceUsd: 450, source: "OEM Dealer" }, { name: "Fuel Pump Seal Kit", partNumber: "13-53-7-619-293", priceUsd: 60, source: "RockAuto" }] },
+    { id: "timing_chain_tensioner", label: "Timing Chain Tensioner Wear", category: "Engine & Drivetrain", severity: "HIGH", costMin: 1200, costMax: 2200, partsCostMin: 515, partsCostMax: 820, labourHours: 7, urgency: "Immediate", explanation: "B48 engines have known timing chain tensioner issues before 100k miles. A cold-start rattle in the first 2–3 seconds is the key symptom. Ignoring this leads to chain slap and potential catastrophic engine damage.", parts: [{ name: "Timing Chain Kit", partNumber: "11-31-8-604-154", priceUsd: 550, source: "OEM Dealer" }, { name: "Chain Tensioner", partNumber: "11-31-7-590-955", priceUsd: 120, source: "RockAuto" }] },
+    { id: "valve_cover_gasket", label: "Valve Cover Gasket Oil Leak", category: "Engine & Drivetrain", severity: "MED", costMin: 400, costMax: 700, partsCostMin: 85, partsCostMax: 130, labourHours: 2.5, urgency: "Soon", explanation: "BMW N20/B48 valve cover gaskets harden and crack between 80k–100k miles. Look for oil residue on top of the engine and a burning oil smell after driving.", parts: [{ name: "Valve Cover Gasket Set", partNumber: "11-12-7-570-764", priceUsd: 95, source: "OEM Dealer" }] },
+    { id: "control_arm_bushings", label: "Front Control Arm Bushings", category: "Chassis & Suspension", severity: "MED", costMin: 600, costMax: 1100, partsCostMin: 290, partsCostMax: 420, labourHours: 2.5, urgency: "Soon", explanation: "F30 control arm bushings typically wear out between 80k–120k miles. Symptoms are vague steering, clunking over bumps, and uneven tire wear. Full front control arm replacement recommended.", parts: [{ name: "Front Control Arm Left", partNumber: "31-10-6-862-755", priceUsd: 175, source: "OEM Dealer" }, { name: "Front Control Arm Right", partNumber: "31-10-6-862-756", priceUsd: 175, source: "OEM Dealer" }] },
+    { id: "coolant_system", label: "Coolant System Inspection", category: "Engine & Drivetrain", severity: "MED", costMin: 500, costMax: 900, partsCostMin: 120, partsCostMax: 180, labourHours: 3, urgency: "Soon", explanation: "BMW plastic coolant components — expansion tank, thermostat housing, water pump — are known failure points after 80k miles. Proactive replacement prevents roadside breakdowns.", parts: [{ name: "Expansion Tank", partNumber: "17-13-7-640-729", priceUsd: 75, source: "RockAuto" }, { name: "Thermostat", partNumber: "11-53-7-603-798", priceUsd: 65, source: "RockAuto" }] },
+    { id: "brake_fluid", label: "Brake Fluid Service", category: "Engine & Drivetrain", severity: "LOW", costMin: 80, costMax: 150, partsCostMin: 20, partsCostMax: 30, labourHours: 0.5, urgency: "Monitor", explanation: "BMW recommends brake fluid replacement every 2 years regardless of mileage. Ask seller for service records. Fresh fluid costs $80–$150 at a shop.", parts: [] },
+    { id: "spark_plugs", label: "Spark Plug Replacement", category: "Engine & Drivetrain", severity: "LOW", costMin: 200, costMax: 350, partsCostMin: 80, partsCostMax: 120, labourHours: 1, urgency: "Monitor", explanation: "At 94k miles spark plugs are likely original. BMW recommends replacement at 60k mile intervals. Fresh plugs improve fuel economy and throttle response.", parts: [{ name: "Spark Plug Set (4x)", partNumber: "12-12-0-037-607", priceUsd: 95, source: "OEM Dealer" }] },
+  ],
+};
+
 function Index() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
@@ -115,11 +154,23 @@ function Index() {
   const [claudeError, setClaudeError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [shareId, setShareId] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+
+  // Demo mode: ?demo=true skips Stripe and loads pre-built report
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") === "true") {
+      setIsDemo(true);
+      setAnalysis(DEMO_ANALYSIS);
+      setPhase("report");
+      window.scrollTo({ top: 0 });
+    }
+  }, []);
 
   // Scanning → preview po animaci
   useEffect(() => {
@@ -474,6 +525,7 @@ function Index() {
             recallSource={analysis.recallSource}
             onNewReport={goHome}
             shareId={shareId ?? undefined}
+            isDemo={isDemo}
           />
         )}
       </main>

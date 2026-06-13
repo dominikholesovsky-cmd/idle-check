@@ -15,7 +15,7 @@ export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
   recommendation, onNewReport,
   sellerRedFlags, marketValueNote, recallSource,
-  shareId, isSharedView,
+  shareId, isSharedView, isDemo,
 }: {
   vehicle: Vehicle;
   marketplace: string;
@@ -29,6 +29,7 @@ export function ReportView({
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
   shareId?: string;
   isSharedView?: boolean;
+  isDemo?: boolean;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -372,8 +373,15 @@ export function ReportView({
           <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Full Report Unlocked
+                <div className="flex items-center gap-2">
+                  <span className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                    Full Report Unlocked
+                  </span>
+                  {isDemo && (
+                    <span className="rounded border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
+                      Demo
+                    </span>
+                  )}
                 </div>
                 <div className="mt-1 text-base font-bold text-zinc-900 sm:text-lg">
                   {vehicleName}
