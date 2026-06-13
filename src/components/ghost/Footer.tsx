@@ -10,7 +10,7 @@ export function Footer() {
           </span>
           <div className="flex items-center gap-3">
             <a
-              href="#"
+              href="https://www.instagram.com/idlecheck/"
               aria-label="Instagram"
               className="transition-colors hover:text-zinc-900"
             >
