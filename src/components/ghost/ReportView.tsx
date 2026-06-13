@@ -316,7 +316,7 @@ export function ReportView({
     { id: "recalls", label: "Recalls" },
   ];
 
-  const shareUrl = shareId ? `${typeof window !== "undefined" ? window.location.origin : "https://idle-check.vercel.app"}/report/${shareId}` : "";
+  const shareUrl = shareId ? `${typeof window !== "undefined" ? window.location.origin : "https://idle-check.com"}/report/${shareId}` : "";
 
   return (
     <>
