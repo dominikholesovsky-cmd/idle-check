@@ -317,22 +317,26 @@ export function ReportView({
       doc.text("Print this page and check items off during your in-person inspection.", MARGIN, y);
       y += 14;
 
-      // Content_W minus checkbox(16) minus Notes(80) minus padding
-      const checklistTextW = CONTENT_W - 16 - 80 - 30;
+      const truncateWords = (text: string, maxChars: number) => {
+        if (text.length <= maxChars) return text;
+        const cut = text.slice(0, maxChars).split(" ");
+        cut.pop(); // remove partial word
+        return cut.join(" ") + "...";
+      };
+
+      // col widths: checkbox(16) + text(auto fills remaining) + notes(72)
       autoTable(doc, {
         startY: y,
         head: [["", "What to Check", "Notes"]],
         body: sortedIssues.map((i) => {
           const label = i.label;
-          const note = i.explanation
-            ? i.explanation.slice(0, 100) + (i.explanation.length > 100 ? "..." : "")
-            : "";
+          const note = i.explanation ? truncateWords(i.explanation, 120) : "";
           return ["", note ? `${label}\n${note}` : label, ""];
         }),
         columnStyles: {
           0: { cellWidth: 16, halign: "center" as const },
-          1: { cellWidth: checklistTextW, overflow: "linebreak" as const },
-          2: { cellWidth: 80 },
+          1: { cellWidth: "auto" as const, overflow: "linebreak" as const, fontSize: 7.5 },
+          2: { cellWidth: 72 },
         },
         headStyles: { ...tableTheme.headStyles, fillColor: [60,60,60] as [number,number,number] },
         styles: { ...tableTheme.styles, fontSize: 8, cellPadding: 5 },
@@ -443,19 +447,22 @@ export function ReportView({
       ? `I'd be comfortable at $${offerRounded.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
       : `I'd be comfortable at $${Math.round(displayPrice / 100) * 100} cash. Would that work for you? Happy to come take a look this week if so.`;
     const script = `${opener}\n\n${middle}\n\n${close}`;
-    const scriptLines = doc.splitTextToSize(script, CONTENT_W);
-    y = ensureSpace(scriptLines.length * 13 + 20, y);
+    const BOX_PAD = 10;
+    const scriptMaxW = CONTENT_W - BOX_PAD * 2;
+    const scriptLines = doc.splitTextToSize(script, scriptMaxW);
+    const lineH = 12;
+    const boxH = scriptLines.length * lineH + BOX_PAD * 2;
+    y = ensureSpace(boxH + 20, y);
     // Script box
     doc.setFillColor(...([249,249,249] as [number,number,number]));
     doc.setDrawColor(...([224,224,224] as [number,number,number]));
     doc.setLineWidth(0.5);
-    const boxH = scriptLines.length * 13 + 20;
-    doc.roundedRect(MARGIN, y - 8, CONTENT_W, boxH, 4, 4, "FD");
+    doc.roundedRect(MARGIN, y - BOX_PAD, CONTENT_W, boxH, 4, 4, "FD");
     doc.setTextColor(TEXT);
-    doc.setFontSize(9.5);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(scriptLines, MARGIN + 10, y + 4);
-    y += boxH + 8;
+    doc.text(scriptLines, MARGIN + BOX_PAD, y + 2);
+    y += boxH + 6;
 
     // Suggested offer line
     doc.setTextColor(MUTED);
