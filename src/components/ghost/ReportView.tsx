@@ -317,11 +317,9 @@ export function ReportView({
       doc.text("Print this page and check items off during your in-person inspection.", MARGIN, y);
       y += 14;
 
-      const truncateWords = (text: string, maxChars: number) => {
-        if (text.length <= maxChars) return text;
-        const cut = text.slice(0, maxChars).split(" ");
-        cut.pop(); // remove partial word
-        return cut.join(" ") + "...";
+      const firstSentence = (text: string): string => {
+        const m = text.match(/^[^.!?]+[.!?]/);
+        return m ? m[0].trim() : text;
       };
 
       // col widths: checkbox(16) + text(auto fills remaining) + notes(72)
@@ -330,7 +328,7 @@ export function ReportView({
         head: [["", "What to Check", "Notes"]],
         body: sortedIssues.map((i) => {
           const label = i.label;
-          const note = i.explanation ? truncateWords(i.explanation, 120) : "";
+          const note = i.explanation ? firstSentence(i.explanation) : "";
           return ["", note ? `${label}\n${note}` : label, ""];
         }),
         columnStyles: {
@@ -430,19 +428,26 @@ export function ReportView({
     // ── NEGOTIATION SCRIPT ────────────────────────────────────────
     y = ensureSpace(100, y);
     y = sectionHeading("NEGOTIATION SCRIPT", y);
-    const repairRounded = Math.round(grandTotal / 100) * 100;
     const offerRounded = Math.round(suggestedOffer / 100) * 100;
     const yearStr2 = vehicle.year ? `${vehicle.year} ` : "";
     const modelStr = `${yearStr2}${vehicle.make} ${vehicle.model}`.trim();
+    // Only include issues that have a real repair cost (costMin > 0 OR costMax > 0)
+    const pricedIssues = issues.filter((i) => (i.partsCostMin > 0 || i.partsCostMax > 0));
+    const pricedTotal = pricedIssues.reduce(
+      (s, i) => s + Math.round(((i.partsCostMin + i.partsCostMax) / 2) + i.labourHours * 120), 0
+    );
+    const pricedRounded = Math.round(pricedTotal / 100) * 100;
     const issueNames = issues.map((i) => i.label.toLowerCase());
     const issuesSentence = issues.length === 0 ? ""
       : issues.length === 1 ? issueNames[0]
       : issues.length === 2 ? `${issueNames[0]} and ${issueNames[1]}`
       : `${issueNames.slice(0, -1).join(", ")}, and ${issueNames[issueNames.length - 1]}`;
     const opener = `Hey! I came across your ${modelStr} listing and I've actually been looking at a few of these.`;
-    const middle = issues.length > 0
-      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${repairRounded.toLocaleString()} at a shop.`
-      : `I did some research before reaching out and the listing looks solid on paper.`;
+    const middle = issues.length === 0
+      ? `I did some research before reaching out and the listing looks solid on paper.`
+      : pricedIssues.length > 0
+      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${pricedRounded.toLocaleString()} at a shop.`
+      : `I did some research before reaching out — at this mileage, ${issuesSentence} are worth having a mechanic look over before committing. Several items need professional inspection before I can commit to a price.`;
     const close = issues.length > 0
       ? `I'd be comfortable at $${offerRounded.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
       : `I'd be comfortable at $${Math.round(displayPrice / 100) * 100} cash. Would that work for you? Happy to come take a look this week if so.`;
