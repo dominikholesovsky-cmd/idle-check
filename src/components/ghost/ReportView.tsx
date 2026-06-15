@@ -132,179 +132,305 @@ export function ReportView({
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
+    const MARGIN = 48;
+    const CONTENT_W = pageW - MARGIN * 2;
     const ACCENT = "#b22222";
     const TEXT = "#111111";
     const MUTED = "#6b7280";
+    const LIGHT = "#f5f5f5";
+    const BORDER = "#e0e0e0";
 
     const tableTheme = {
-      headStyles: { fillColor: ACCENT, textColor: "#ffffff", fontStyle: "bold" as const },
-      bodyStyles: { fillColor: "#f9f9f9", textColor: TEXT },
-      alternateRowStyles: { fillColor: "#f3f3f3" },
-      styles: {
-        font: "helvetica",
-        fontSize: 9,
-        cellPadding: 6,
-        lineColor: "#e5e5e5" as unknown as number,
-        lineWidth: 0.3,
-        textColor: TEXT,
-      },
-      margin: { left: 40, right: 40 },
+      headStyles: { fillColor: [178, 34, 34] as [number,number,number], textColor: [255,255,255] as [number,number,number], fontStyle: "bold" as const, fontSize: 9 },
+      bodyStyles: { fillColor: [255,255,255] as [number,number,number], textColor: [17,17,17] as [number,number,number] },
+      alternateRowStyles: { fillColor: [249,249,249] as [number,number,number] },
+      styles: { font: "helvetica", fontSize: 9, cellPadding: 7, lineColor: [224,224,224] as [number,number,number], lineWidth: 0.3 },
+      margin: { left: MARGIN, right: MARGIN },
+      tableLineColor: [224,224,224] as [number,number,number],
+      tableLineWidth: 0.3,
     };
 
-    // Header
+    const sectionHeading = (label: string, y: number) => {
+      doc.setTextColor(ACCENT);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.text(label, MARGIN, y);
+      doc.setDrawColor(ACCENT);
+      doc.setLineWidth(0.5);
+      doc.line(MARGIN, y + 3, pageW - MARGIN, y + 3);
+      return y + 16;
+    };
+
+    const ensureSpace = (needed: number, currentY: number): number => {
+      if (currentY + needed > pageH - 60) { doc.addPage(); return 56; }
+      return currentY;
+    };
+
+    // ── HEADER BLOCK ──────────────────────────────────────────────
+    // Red top bar
+    doc.setFillColor(178, 34, 34);
+    doc.rect(0, 0, pageW, 6, "F");
+
+    // Logo
     doc.setTextColor(ACCENT);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text("IDLE // CHECK REPORT", 40, 60);
+    doc.setFontSize(16);
+    doc.text("IDLE // CHECK", MARGIN, 38);
 
-    doc.setTextColor(TEXT);
-    doc.setFontSize(14);
-    doc.text(vehicleName || "Vehicle Report", 40, 84);
-
+    // Report label
     doc.setTextColor(MUTED);
-    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    const dateStr = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    doc.text(
-      `${dateStr}${mileageStr ? ` · ${mileageStr}` : ""} · Asked on ${marketplace || "Unknown"} · $${displayPrice.toLocaleString()}`,
-      40, 102
-    );
+    doc.setFontSize(9);
+    doc.text("Pre-Purchase Inspection Report", MARGIN, 52);
 
-    doc.setDrawColor(ACCENT);
-    doc.setLineWidth(1.5);
-    doc.line(40, 116, pageW - 40, 116);
+    // Date right-aligned
+    const dateStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    doc.text(dateStr, pageW - MARGIN, 38, { align: "right" });
 
-    // Verdict
-    let y = 144;
-    doc.setTextColor(ACCENT);
-    doc.setFontSize(11);
+    // Divider
+    doc.setDrawColor(...([220,220,220] as [number,number,number]));
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN, 62, pageW - MARGIN, 62);
+
+    // Vehicle info grid
+    const infoY = 80;
+    doc.setTextColor(MUTED);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+
+    const infoItems: [string, string][] = [
+      ["VEHICLE", vehicleName || "—"],
+      ["MILEAGE", mileageStr || "—"],
+      ["ASKING PRICE", displayPrice ? `$${displayPrice.toLocaleString()}` : "—"],
+      ["MARKETPLACE", marketplace || "—"],
+      ...(vehicle.vin ? [["VIN", vehicle.vin] as [string,string]] : []),
+    ];
+    const colW = CONTENT_W / Math.min(infoItems.length, 4);
+    infoItems.forEach((item, idx) => {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      const x = MARGIN + col * colW;
+      const y = infoY + row * 30;
+      doc.setTextColor(MUTED);
+      doc.setFontSize(7);
+      doc.text(item[0], x, y);
+      doc.setTextColor(TEXT);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(item[1], x, y + 12);
+      doc.setFont("helvetica", "normal");
+    });
+
+    // Second divider
+    const afterHeaderY = infoItems.length > 4 ? infoY + 60 : infoY + 32;
+    doc.setDrawColor(...([220,220,220] as [number,number,number]));
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN, afterHeaderY, pageW - MARGIN, afterHeaderY);
+
+    // ── VERDICT ───────────────────────────────────────────────────
+    let y = afterHeaderY + 20;
+    y = sectionHeading("VERDICT", y);
+    y += 4;
+
+    // Verdict badge
+    const verdictLabel = safeRecommendation.verdict?.toUpperCase() || "—";
+    const badgeColors: Record<string, [number,number,number]> = {
+      "BUY": [22,163,74], "NEGOTIATE": [234,88,12], "SKIP": [185,28,28], "CAUTION": [161,98,7],
+    };
+    const badgeColor = badgeColors[verdictLabel] ?? [107,114,128];
+    doc.setFillColor(...badgeColor);
+    doc.roundedRect(MARGIN, y, 72, 18, 3, 3, "F");
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text(`VERDICT · ${safeRecommendation.verdict.toUpperCase()}`, 40, y);
-    y += 18;
+    doc.text(verdictLabel, MARGIN + 36, y + 12, { align: "center" });
 
+    y += 28;
     doc.setTextColor(TEXT);
-    doc.setFontSize(13);
-    const headlineLines = doc.splitTextToSize(safeRecommendation.headline || "", pageW - 80);
-    doc.text(headlineLines, 40, y);
-    y += headlineLines.length * 16 + 6;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    const headlineLines = doc.splitTextToSize(safeRecommendation.headline || "", CONTENT_W);
+    doc.text(headlineLines, MARGIN, y);
+    y += headlineLines.length * 15 + 6;
 
     doc.setTextColor(MUTED);
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setFont("helvetica", "normal");
-    const summaryLines = doc.splitTextToSize(safeRecommendation.summary || "", pageW - 80);
-    doc.text(summaryLines, 40, y);
+    const summaryLines = doc.splitTextToSize(safeRecommendation.summary || "", CONTENT_W);
+    doc.text(summaryLines, MARGIN, y);
     y += summaryLines.length * 13 + 20;
 
-    // Issues table
+    // ── DETECTED ISSUES ───────────────────────────────────────────
     if (issues.length) {
-      doc.setTextColor(ACCENT);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("DETECTED ISSUES", 40, y);
-      y += 8;
+      y = ensureSpace(60, y);
+      y = sectionHeading("DETECTED ISSUES", y);
+      const URGENCY_ORDER: Record<string, number> = { Immediate: 0, Soon: 1, Monitor: 2 };
+      const sortedIssues = [...issues].sort(
+        (a, b) => (URGENCY_ORDER[a.urgency] ?? 3) - (URGENCY_ORDER[b.urgency] ?? 3)
+      );
       autoTable(doc, {
         startY: y,
-        head: [["Issue", "Severity", "Cost Range"]],
-        body: issues.map((i) => [
+        head: [["#", "Issue", "Category", "Sev.", "Urgency", "Parts Cost", "Labour"]],
+        body: sortedIssues.map((i, idx) => [
+          idx + 1,
           i.label,
+          i.category,
           i.severity,
-          `$${i.costMin.toLocaleString()} – $${i.costMax.toLocaleString()}`,
+          i.urgency,
+          `$${i.partsCostMin.toLocaleString()} – $${i.partsCostMax.toLocaleString()}`,
+          `${i.labourHours}h`,
         ]),
+        columnStyles: {
+          0: { cellWidth: 20, halign: "center" as const },
+          3: { cellWidth: 30, halign: "center" as const },
+          4: { cellWidth: 52 },
+          5: { cellWidth: 82, halign: "right" as const },
+          6: { cellWidth: 36, halign: "right" as const },
+        },
         ...tableTheme,
       });
-      y = (doc as any).lastAutoTable.finalY + 24;
+      y = (doc as any).lastAutoTable.finalY + 20;
     }
 
-    // Red Flags
-    if (hasRedFlags) {
-      if (y > pageH - 120) { doc.addPage(); y = 60; }
-      doc.setTextColor(ACCENT);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("SELLER RED FLAGS", 40, y);
-      y += 16;
-      doc.setTextColor(TEXT);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      sellerRedFlags!.forEach((flag) => {
-        const lines = doc.splitTextToSize(`• ${flag}`, pageW - 80);
-        if (y + lines.length * 13 > pageH - 60) { doc.addPage(); y = 60; }
-        doc.text(lines, 40, y);
-        y += lines.length * 13 + 4;
+    // ── MAINTENANCE ROADMAP ───────────────────────────────────────
+    const urgencyGroups: Record<string, typeof issues> = { Immediate: [], Soon: [], Monitor: [] };
+    issues.forEach((i) => { (urgencyGroups[i.urgency] ??= []).push(i); });
+    const hasRoadmap = Object.values(urgencyGroups).some((g) => g.length > 0);
+    if (hasRoadmap) {
+      y = ensureSpace(80, y);
+      y = sectionHeading("MAINTENANCE ROADMAP", y);
+      const roadmapRows: string[][] = [];
+      const urgencyColors: Record<string, [number,number,number]> = {
+        Immediate: [185,28,28], Soon: [161,98,7], Monitor: [37,99,235],
+      };
+      (["Immediate","Soon","Monitor"] as const).forEach((urgency) => {
+        const group = urgencyGroups[urgency];
+        if (!group?.length) return;
+        group.forEach((i, idx) => {
+          roadmapRows.push([idx === 0 ? urgency : "", i.label, i.category,
+            `$${i.partsCostMin.toLocaleString()} – $${i.partsCostMax.toLocaleString()}`]);
+        });
       });
-      y += 16;
+      autoTable(doc, {
+        startY: y,
+        head: [["Priority", "Item", "Category", "Estimated Cost"]],
+        body: roadmapRows,
+        columnStyles: {
+          0: { cellWidth: 62, fontStyle: "bold" as const },
+          3: { cellWidth: 90, halign: "right" as const },
+        },
+        didDrawCell: (data) => {
+          if (data.column.index === 0 && data.section === "body" && data.cell.text[0]) {
+            const color = urgencyColors[data.cell.text[0] as string] ?? [107,114,128];
+            doc.setTextColor(...color);
+          }
+        },
+        ...tableTheme,
+      });
+      y = (doc as any).lastAutoTable.finalY + 20;
     }
 
-    // Market value note
+    // ── RED FLAGS ─────────────────────────────────────────────────
+    if (hasRedFlags) {
+      y = ensureSpace(60, y);
+      y = sectionHeading("SELLER RED FLAGS", y);
+      sellerRedFlags!.forEach((flag) => {
+        const lines = doc.splitTextToSize(`• ${flag}`, CONTENT_W);
+        y = ensureSpace(lines.length * 13, y);
+        doc.setTextColor(TEXT);
+        doc.setFontSize(9.5);
+        doc.setFont("helvetica", "normal");
+        doc.text(lines, MARGIN, y);
+        y += lines.length * 13 + 3;
+      });
+      y += 14;
+    }
+
+    // ── MARKET VALUE ──────────────────────────────────────────────
     if (hasMarketNote) {
-      if (y > pageH - 80) { doc.addPage(); y = 60; }
-      doc.setTextColor(ACCENT);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("MARKET VALUE", 40, y);
-      y += 16;
+      y = ensureSpace(60, y);
+      y = sectionHeading("MARKET VALUE", y);
       doc.setTextColor(TEXT);
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setFont("helvetica", "normal");
-      const mvLines = doc.splitTextToSize(marketValueNote!, pageW - 80);
-      doc.text(mvLines, 40, y);
+      const mvLines = doc.splitTextToSize(marketValueNote!, CONTENT_W);
+      doc.text(mvLines, MARGIN, y);
       y += mvLines.length * 13 + 20;
     }
 
-    // Inspection checklist
-    const checklist: Record<string, string[]> = {
-      "Exterior": ["Paint consistency & overspray", "Panel gaps even on all sides", "Rust on rocker panels & wheel arches", "Tire tread & uneven wear", "Windshield chips / cracks"],
-      "Under Hood": ["Oil level & color (not milky)", "Coolant level & color", "Belt cracks & tension", "Battery terminals clean", "No fluid leaks on engine block"],
-      "Interior": ["Warning lights on ignition", "AC blows cold within 30s", "All windows / locks / mirrors", "Seat wear vs claimed mileage", "Odors: smoke, mildew, fuel"],
-      "Test Drive": ["Cold start without rough idle", "Smooth acceleration through gears", "Brakes straight, no pulsing", "Steering centered, no pull", "No vibration at 60+ mph"],
-      "Under Car": ["No fresh oil / coolant drips", "Exhaust intact, no rust holes", "CV boots not torn", "Suspension bushings not cracked", "Frame: no welds or kinks"],
-    };
-    if (y > pageH - 180) { doc.addPage(); y = 60; }
-    doc.setTextColor(ACCENT);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("PRE-PURCHASE INSPECTION CHECKLIST", 40, y);
-    y += 8;
-    autoTable(doc, {
-      startY: y,
-      head: [["Area", "Check"]],
-      body: Object.entries(checklist).flatMap(([area, items]) =>
-        items.map((it, idx) => [idx === 0 ? area : "", it])
-      ),
-      ...tableTheme,
-    });
-    y = (doc as any).lastAutoTable.finalY + 24;
-
-    // Recalls
+    // ── NHTSA RECALLS ─────────────────────────────────────────────
     if (recalls.length) {
-      if (y > pageH - 120) { doc.addPage(); y = 60; }
-      doc.setTextColor(ACCENT);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("NHTSA RECALLS", 40, y);
-      y += 8;
+      y = ensureSpace(80, y);
+      y = sectionHeading("NHTSA RECALLS", y);
       autoTable(doc, {
         startY: y,
-        head: [["Date", "Component", "Status"]],
-        body: recalls.map((r) => [r.date, r.component, r.status]),
+        head: [["Date", "Component", "Consequence", "Status"]],
+        body: recalls.map((r) => [r.date || "—", r.component || "—", (r as any).consequence || "—", r.status || "—"]),
+        columnStyles: { 2: { cellWidth: 180 } },
         ...tableTheme,
       });
+      y = (doc as any).lastAutoTable.finalY + 20;
     }
 
-    // Footer on every page
+    // ── NEGOTIATION SCRIPT ────────────────────────────────────────
+    y = ensureSpace(100, y);
+    y = sectionHeading("NEGOTIATION SCRIPT", y);
+    const repairRounded = Math.round(grandTotal / 100) * 100;
+    const offerRounded = Math.round(suggestedOffer / 100) * 100;
+    const yearStr2 = vehicle.year ? `${vehicle.year} ` : "";
+    const modelStr = `${yearStr2}${vehicle.make} ${vehicle.model}`.trim();
+    const issueNames = issues.map((i) => i.label.toLowerCase());
+    const issuesSentence = issues.length === 0 ? ""
+      : issues.length === 1 ? issueNames[0]
+      : issues.length === 2 ? `${issueNames[0]} and ${issueNames[1]}`
+      : `${issueNames.slice(0, -1).join(", ")}, and ${issueNames[issueNames.length - 1]}`;
+    const opener = `Hey! I came across your ${modelStr} listing and I've actually been looking at a few of these.`;
+    const middle = issues.length > 0
+      ? `I did some research before reaching out — at this mileage, ${issuesSentence} are pretty common on these. Getting those sorted would run around $${repairRounded.toLocaleString()} at a shop.`
+      : `I did some research before reaching out and the listing looks solid on paper.`;
+    const close = issues.length > 0
+      ? `I'd be comfortable at $${offerRounded.toLocaleString()} cash. Would that work for you? Happy to come take a look this week if so.`
+      : `I'd be comfortable at $${Math.round(displayPrice / 100) * 100} cash. Would that work for you? Happy to come take a look this week if so.`;
+    const script = `${opener}\n\n${middle}\n\n${close}`;
+    const scriptLines = doc.splitTextToSize(script, CONTENT_W);
+    y = ensureSpace(scriptLines.length * 13 + 20, y);
+    // Script box
+    doc.setFillColor(...([249,249,249] as [number,number,number]));
+    doc.setDrawColor(...([224,224,224] as [number,number,number]));
+    doc.setLineWidth(0.5);
+    const boxH = scriptLines.length * 13 + 20;
+    doc.roundedRect(MARGIN, y - 8, CONTENT_W, boxH, 4, 4, "FD");
+    doc.setTextColor(TEXT);
+    doc.setFontSize(9.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(scriptLines, MARGIN + 10, y + 4);
+    y += boxH + 8;
+
+    // Suggested offer line
+    doc.setTextColor(MUTED);
+    doc.setFontSize(8.5);
+    doc.text(`Suggested opening offer: `, MARGIN, y);
+    doc.setTextColor(TEXT);
+    doc.setFont("helvetica", "bold");
+    doc.text(`$${offerRounded.toLocaleString()}`, MARGIN + 120, y);
+
+    // ── FOOTER ON EVERY PAGE ──────────────────────────────────────
     const total = doc.getNumberOfPages();
     for (let p = 1; p <= total; p++) {
       doc.setPage(p);
+      doc.setFillColor(...([248,248,248] as [number,number,number]));
+      doc.rect(0, pageH - 36, pageW, 36, "F");
+      doc.setDrawColor(...([220,220,220] as [number,number,number]));
+      doc.setLineWidth(0.5);
+      doc.line(0, pageH - 36, pageW, pageH - 36);
       doc.setTextColor(MUTED);
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setFont("helvetica", "normal");
       doc.text(
-        "Generated by Idle Check · Always verify with a licensed mechanic",
-        pageW / 2,
-        pageH - 24,
-        { align: "center" }
+        "Generated by Idle Check · idle-check.com · For informational purposes only. Always verify with a licensed mechanic.",
+        pageW / 2, pageH - 18, { align: "center" }
       );
-      doc.text(`${p} / ${total}`, pageW - 40, pageH - 24, { align: "right" });
+      doc.text(`${p} / ${total}`, pageW - MARGIN, pageH - 18, { align: "right" });
     }
 
     const fname = `idle-check-${(vehicleName || "report").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
