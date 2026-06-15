@@ -327,7 +327,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
 
       {/* Recent Reports */}
       {history.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-4">
           <div className="mb-3 flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-zinc-600" />
             <span className="font-condensed text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600">
