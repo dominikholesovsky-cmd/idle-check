@@ -107,7 +107,7 @@ function Row({
   const hasParts = Array.isArray(issue.parts) && issue.parts.length > 0;
 
   return (
-    <li className={`py-3 ${isRecommended && !isChecked ? "bg-red-50" : ""}`}>
+    <li className={`px-2 py-4 ${isRecommended && !isChecked ? "bg-red-50" : ""}`}>
       <div className="flex items-center gap-3">
         <SeverityPill severity={issue.severity} />
         <Checkbox
@@ -121,7 +121,7 @@ function Row({
           onClick={() => setOpen((v) => !v)}
           className="flex flex-1 items-center justify-between gap-3 text-left"
         >
-          <span className="flex items-center gap-2">
+          <span className="flex flex-wrap items-center gap-2">
             <span className={`text-[14px] ${isChecked ? "text-zinc-900" : "text-zinc-800"}`}>
               {issue.label}
             </span>
@@ -131,28 +131,27 @@ function Row({
               </span>
             )}
             {hasParts && !open && (
-              <span className="inline-flex items-center gap-1 rounded-sm bg-blue-500/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+              <span className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-blue-500/10 px-2 py-1 font-condensed text-[10px] font-semibold uppercase tracking-wider text-blue-600 transition-colors hover:bg-blue-100">
                 <Package className="h-2.5 w-2.5" />
                 {issue.parts!.length} {issue.parts!.length === 1 ? "part" : "parts"}
+                <ChevronDown className="ml-0.5 h-2.5 w-2.5" />
               </span>
             )}
           </span>
-          <span className="flex items-center gap-2 shrink-0">
+          <span className="flex shrink-0 items-center gap-2">
             <span className="font-mono text-[13px] font-semibold tabular-nums text-zinc-900">
               ${issue.partsCostMin.toLocaleString()} – ${issue.partsCostMax.toLocaleString()}
               <span className="ml-1 font-condensed text-[10px] font-normal uppercase tracking-wider text-zinc-500">parts</span>
             </span>
             <ChevronDown
-              className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${
-                open ? "rotate-180" : ""
-              }`}
+              className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
             />
           </span>
         </button>
       </div>
 
       {open && (
-        <div className="mt-2 pl-[78px] pr-2 view-fade-in">
+        <div className="mt-3 border-t border-gray-100 pl-[78px] pr-2 pt-3 view-fade-in">
           <p className="text-[13px] leading-relaxed text-zinc-600">
             {issue.explanation}
           </p>
@@ -190,6 +189,7 @@ export function InspectionChecklist({
     <Accordion type="multiple" defaultValue={[]} className="space-y-3">
       {CATEGORIES.map((cat) => {
         const items = issues.filter((i) => i.category === cat);
+        if (items.length === 0) return null;
         const recCount = items.filter((i) => recommendedIds.has(i.id)).length;
         const partsCount = items.filter(
           (i) => Array.isArray(i.parts) && i.parts.length > 0
@@ -217,7 +217,7 @@ export function InspectionChecklist({
                   )}
                   {partsCount > 0 && (
                     <span
-                      title="Click to see estimated repair cost for this item"
+                      title="Expand to see estimated repair cost for these items"
                       className="rounded-sm bg-blue-500/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-blue-600"
                     >
                       {partsCount} with pricing
@@ -225,7 +225,7 @@ export function InspectionChecklist({
                   )}
                 </span>
                 <span className="font-mono text-[11px] text-zinc-500">
-                  {items.length} CHECKS
+                  {items.length} {items.length === 1 ? "CHECK" : "CHECKS"}
                 </span>
               </div>
             </AccordionTrigger>

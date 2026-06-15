@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,9 +73,14 @@ export function NegotiationScript({
     <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-zinc-900">
-            Negotiation Script
-          </h3>
+          <span className="flex items-center gap-1.5">
+            <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-zinc-900">
+              Negotiation Script
+            </h3>
+            <span title="Auto-generated message based on flagged issues — edit before sending">
+              <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+            </span>
+          </span>
           <p className="mt-1 text-xs text-zinc-500">
             Auto-generated. Updates live as you check inspection items.
           </p>

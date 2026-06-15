@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link } from "lucide-react";
+import { AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link, HelpCircle } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -367,7 +367,7 @@ export function ReportView({
       </aside>
 
       <div className="lg:pl-[200px]">
-        <section className="view-fade-in relative z-10 mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+        <section className="view-fade-in relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
 
           {/* Status bar */}
           <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
@@ -431,97 +431,124 @@ export function ReportView({
             </div>
           </div>
 
-          {/* Verdict */}
-          <div id="section-verdict">
+          {/* Verdict — full width */}
+          <div id="section-verdict" className="mb-6">
             <RecommendationCard recommendation={safeRecommendation} />
           </div>
 
-          {/* Roadmap + Market Value + Red Flags — unified block */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-            <h3 className="mb-4 font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Maintenance Roadmap
-            </h3>
-            <MaintenanceRoadmap recommendation={safeRecommendation} issues={issues} />
+          {/* Two-column grid: main content + sidebar */}
+          <div className="grid gap-6 lg:grid-cols-3">
 
-            {hasMarketNote && (
-              <div className="mt-5 border-t border-gray-100 pt-5">
-                <div className="flex items-start gap-3">
-                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-                  <div>
-                    <span className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                      Market Value
-                    </span>
-                    <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-900">{marketValueNote}</p>
+            {/* ── Main column ── */}
+            <div className="space-y-6 lg:col-span-2">
+
+              {/* Roadmap + Market Value + Red Flags */}
+              <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-1.5">
+                  <h3 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                    Maintenance Roadmap
+                  </h3>
+                  <span title="Items grouped by urgency based on this vehicle's condition">
+                    <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                  </span>
+                </div>
+                <MaintenanceRoadmap recommendation={safeRecommendation} issues={issues} />
+
+                {hasMarketNote && (
+                  <div className="mt-5 border-t border-gray-100 pt-5">
+                    <div className="flex items-start gap-3">
+                      <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+                      <div>
+                        <span className="flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                          Market Value
+                          <span title="Estimated fair price based on this vehicle's age, mileage, and condition">
+                            <HelpCircle className="h-3 w-3 text-gray-400" />
+                          </span>
+                        </span>
+                        <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-900">{marketValueNote}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {hasRedFlags && (
-              <div className="mt-5 border-t border-gray-100 pt-5">
-                <div className="mb-2 flex items-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-                  <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    Seller Red Flags · {sellerRedFlags!.length} detected
-                  </h2>
-                </div>
-                <ul className="space-y-1.5">
-                  {sellerRedFlags!.map((flag, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                      <span className="text-[13px] leading-relaxed text-zinc-900">{flag}</span>
-                    </li>
-                  ))}
-                </ul>
+                {hasRedFlags && (
+                  <div className="mt-5 border-t border-gray-100 pt-5">
+                    <div className="mb-2 flex items-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                      <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                        Seller Red Flags · {sellerRedFlags!.length} detected
+                      </h2>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {sellerRedFlags!.map((flag, i) => (
+                        <li key={i} className="flex items-start gap-2.5">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          <span className="text-[13px] leading-relaxed text-zinc-900">{flag}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Checklist + Budget — unified block */}
-          <div id="section-issues" className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Inspection Checklist
-              </h2>
-              {recommendedIds.size > 0 && (
-                <span className="font-condensed text-[11px] text-zinc-500">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
-                  {recommendedIds.size} recommended
-                </span>
-              )}
+              {/* Inspection Checklist */}
+              <div id="section-issues" className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                      Inspection Checklist
+                    </h2>
+                    <span title="Check items during your in-person inspection to build a custom repair budget">
+                      <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                    </span>
+                  </span>
+                  {recommendedIds.size > 0 && (
+                    <span className="font-condensed text-[11px] text-zinc-500">
+                      <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
+                      {recommendedIds.size} recommended
+                    </span>
+                  )}
+                </div>
+                <InspectionChecklist
+                  issues={issues}
+                  checked={checked}
+                  onToggle={toggle}
+                  recommendedIds={recommendedIds}
+                />
+              </div>
+
             </div>
-            <InspectionChecklist
-              issues={issues}
-              checked={checked}
-              onToggle={toggle}
-              recommendedIds={recommendedIds}
-            />
-            <div className="mt-5 border-t border-gray-100 pt-5">
+
+            {/* ── Sidebar ── */}
+            <aside className="space-y-6 lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
+
+              {/* Repair Budget */}
               <RepairCostTracker
                 issues={issues}
                 checked={checked}
                 askingPrice={displayPrice}
-                embedded
               />
-              <p className="mt-2 text-[11px] text-zinc-500">
-                Tip: expand a category to see items. Tick items to update the repair budget.
+
+              {/* Negotiation Script */}
+              <div id="section-negotiation">
+                <NegotiationScript
+                  vehicle={vehicle}
+                  askingPrice={displayPrice}
+                  checkedIssues={checkedIssues}
+                  repairTotal={grandTotal}
+                  suggestedOffer={suggestedOffer}
+                />
+              </div>
+
+              <p className="px-1 text-[11px] text-zinc-500">
+                Tip: tick checklist items to update the repair budget and negotiation offer.
               </p>
-            </div>
+
+            </aside>
           </div>
 
-          {/* Negotiation */}
-          <div id="section-negotiation" className="mx-auto w-full max-w-3xl">
-            <NegotiationScript
-              vehicle={vehicle}
-              askingPrice={displayPrice}
-              checkedIssues={checkedIssues}
-              repairTotal={grandTotal}
-              suggestedOffer={suggestedOffer}
-            />
-          </div>
-
-          {/* Recalls */}
-          <div id="section-recalls">
+          {/* Recalls — full width */}
+          <div id="section-recalls" className="mt-6">
             <div className="mb-3 flex items-center gap-2">
               <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
               <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
