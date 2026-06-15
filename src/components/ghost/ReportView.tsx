@@ -268,10 +268,12 @@ export function ReportView({
       const sortedIssues = [...issues].sort(
         (a, b) => (URGENCY_ORDER[a.urgency] ?? 3) - (URGENCY_ORDER[b.urgency] ?? 3)
       );
+      // col widths: Check(14) + #(18) + Issue(auto) + Category(70) + Severity(42) + Urgency(52) + Parts Cost(84) + Labor(38)
       autoTable(doc, {
         startY: y,
-        head: [["#", "Issue", "Category", "Sev.", "Urgency", "Parts Cost", "Labour"]],
+        head: [["", "#", "Issue", "Category", "Severity", "Urgency", "Parts Cost", "Labor (h)"]],
         body: sortedIssues.map((i, idx) => [
+          "☐",   // ☐ checkbox
           idx + 1,
           i.label,
           i.category,
@@ -281,13 +283,45 @@ export function ReportView({
           `${i.labourHours}h`,
         ]),
         columnStyles: {
-          0: { cellWidth: 20, halign: "center" as const },
-          3: { cellWidth: 30, halign: "center" as const },
-          4: { cellWidth: 52 },
-          5: { cellWidth: 82, halign: "right" as const },
-          6: { cellWidth: 36, halign: "right" as const },
+          0: { cellWidth: 14, halign: "center" as const, fontSize: 11 },
+          1: { cellWidth: 18, halign: "center" as const },
+          2: { cellWidth: "auto" as const },
+          3: { cellWidth: 70 },
+          4: { cellWidth: 42, halign: "center" as const },
+          5: { cellWidth: 52 },
+          6: { cellWidth: 84, halign: "right" as const },
+          7: { cellWidth: 38, halign: "right" as const },
         },
         ...tableTheme,
+        styles: { ...tableTheme.styles, fontSize: 8.5, cellPadding: 5 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 20;
+
+      // ── PHYSICAL INSPECTION CHECKLIST ─────────────────────────────
+      y = ensureSpace(60, y);
+      y = sectionHeading("PHYSICAL INSPECTION CHECKLIST", y);
+      doc.setTextColor(MUTED);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text("Print this page and check items off during your in-person inspection.", MARGIN, y);
+      y += 14;
+      autoTable(doc, {
+        startY: y,
+        head: [["", "What to Check", "Notes"]],
+        body: sortedIssues.map((i) => [
+          "☐",
+          i.label + (i.explanation ? `\n${i.explanation.slice(0, 90)}${i.explanation.length > 90 ? "…" : ""}` : ""),
+          "",
+        ]),
+        columnStyles: {
+          0: { cellWidth: 14, halign: "center" as const, fontSize: 11 },
+          1: { cellWidth: "auto" as const },
+          2: { cellWidth: 100 },
+        },
+        headStyles: { ...tableTheme.headStyles, fillColor: [60,60,60] as [number,number,number] },
+        styles: { ...tableTheme.styles, fontSize: 8, cellPadding: 5 },
+        bodyStyles: { ...tableTheme.bodyStyles, minCellHeight: 22 },
+        margin: { left: MARGIN, right: MARGIN },
       });
       y = (doc as any).lastAutoTable.finalY + 20;
     }
