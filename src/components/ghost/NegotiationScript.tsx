@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, HelpCircle } from "lucide-react";
+import { Check, Copy } from "lucide-react";
+import { HelpTooltip } from "./HelpTooltip";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,9 +78,7 @@ export function NegotiationScript({
             <h3 className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-zinc-900">
               Negotiation Script
             </h3>
-            <span title="Auto-generated message based on flagged issues — edit before sending">
-              <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-            </span>
+            <HelpTooltip text="Auto-generated message based on flagged issues — edit before sending" />
           </span>
           <p className="mt-1 text-xs text-zinc-500">
             Auto-generated. Updates live as you check inspection items.

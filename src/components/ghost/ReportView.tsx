@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link, HelpCircle } from "lucide-react";
+import { AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link } from "lucide-react";
+import { HelpTooltip } from "./HelpTooltip";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -448,9 +449,7 @@ export function ReportView({
                   <h3 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                     Maintenance Roadmap
                   </h3>
-                  <span title="Items grouped by urgency based on this vehicle's condition">
-                    <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                  </span>
+                  <HelpTooltip text="Items grouped by urgency based on this vehicle's condition" />
                 </div>
                 <MaintenanceRoadmap recommendation={safeRecommendation} issues={issues} />
 
@@ -461,9 +460,7 @@ export function ReportView({
                       <div>
                         <span className="flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                           Market Value
-                          <span title="Estimated fair price based on this vehicle's age, mileage, and condition">
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </span>
+                          <HelpTooltip text="Estimated fair price based on this vehicle's age, mileage, and condition" />
                         </span>
                         <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-900">{marketValueNote}</p>
                       </div>
@@ -498,9 +495,7 @@ export function ReportView({
                     <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                       Inspection Checklist
                     </h2>
-                    <span title="Check items during your in-person inspection to build a custom repair budget">
-                      <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                    </span>
+                    <HelpTooltip text="Check items during your in-person inspection to build a custom repair budget" />
                   </span>
                   {recommendedIds.size > 0 && (
                     <span className="font-condensed text-[11px] text-zinc-500">
