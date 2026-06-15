@@ -10,10 +10,12 @@ export function RepairCostTracker({
   issues,
   checked,
   askingPrice,
+  embedded = false,
 }: {
   issues: Issue[];
   checked: Set<string>;
   askingPrice: number;
+  embedded?: boolean;
 }) {
   const checkedIssues = issues.filter((i) => checked.has(i.id));
   const partsTotal = checkedIssues.reduce(
@@ -29,7 +31,7 @@ export function RepairCostTracker({
   const count = checkedIssues.length;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-white p-5"}>
       <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
         Estimated US Repair Budget
       </div>

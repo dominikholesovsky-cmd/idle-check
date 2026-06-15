@@ -199,21 +199,27 @@ export function InspectionChecklist({
           <AccordionItem
             key={cat}
             value={cat}
-            className="rounded-lg border border-gray-200 bg-white px-4"
+            className="overflow-hidden rounded-lg border border-gray-200 bg-white"
           >
-            <AccordionTrigger className="py-4 text-left hover:no-underline">
+            <AccordionTrigger className="cursor-pointer px-4 py-4 text-left hover:bg-gray-50 hover:no-underline">
               <div className="flex w-full items-center justify-between gap-3 pr-2">
                 <span className="flex items-center gap-2">
                   <span className="font-condensed text-sm font-semibold uppercase tracking-[0.12em] text-zinc-900">
                     {cat}
                   </span>
                   {recCount > 0 && (
-                    <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    <span
+                      title="Items flagged as high-priority based on this vehicle's known issues"
+                      className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-primary"
+                    >
                       {recCount} recommended
                     </span>
                   )}
                   {partsCount > 0 && (
-                    <span className="rounded-sm bg-blue-500/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+                    <span
+                      title="Click to see estimated repair cost for this item"
+                      className="rounded-sm bg-blue-500/10 px-1.5 py-0.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-blue-600"
+                    >
                       {partsCount} with pricing
                     </span>
                   )}
