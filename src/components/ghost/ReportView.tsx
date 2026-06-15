@@ -268,12 +268,22 @@ export function ReportView({
       const sortedIssues = [...issues].sort(
         (a, b) => (URGENCY_ORDER[a.urgency] ?? 3) - (URGENCY_ORDER[b.urgency] ?? 3)
       );
-      // col widths: Check(14) + #(18) + Issue(auto) + Category(70) + Severity(42) + Urgency(52) + Parts Cost(84) + Labor(38)
+      const drawCheckbox = (data: any) => {
+        if (data.column.index === 0 && data.section === "body") {
+          const cx = data.cell.x + (data.cell.width - 5) / 2;
+          const cy = data.cell.y + (data.cell.height - 5) / 2;
+          doc.setDrawColor(100, 100, 100);
+          doc.setLineWidth(0.5);
+          doc.rect(cx, cy, 5, 5);
+        }
+      };
+
+      // col widths: Check(16) + #(18) + Issue(auto) + Category(70) + Severity(44) + Urgency(54) + Parts Cost(84) + Labor(38)
       autoTable(doc, {
         startY: y,
         head: [["", "#", "Issue", "Category", "Severity", "Urgency", "Parts Cost", "Labor (h)"]],
         body: sortedIssues.map((i, idx) => [
-          "☐",   // ☐ checkbox
+          "",   // drawn via didDrawCell
           idx + 1,
           i.label,
           i.category,
@@ -283,15 +293,16 @@ export function ReportView({
           `${i.labourHours}h`,
         ]),
         columnStyles: {
-          0: { cellWidth: 14, halign: "center" as const, fontSize: 11 },
+          0: { cellWidth: 16, halign: "center" as const },
           1: { cellWidth: 18, halign: "center" as const },
           2: { cellWidth: "auto" as const },
           3: { cellWidth: 70 },
-          4: { cellWidth: 42, halign: "center" as const },
-          5: { cellWidth: 52 },
+          4: { cellWidth: 44, halign: "center" as const },
+          5: { cellWidth: 54 },
           6: { cellWidth: 84, halign: "right" as const },
           7: { cellWidth: 38, halign: "right" as const },
         },
+        didDrawCell: drawCheckbox,
         ...tableTheme,
         styles: { ...tableTheme.styles, fontSize: 8.5, cellPadding: 5 },
       });
@@ -305,22 +316,28 @@ export function ReportView({
       doc.setFont("helvetica", "normal");
       doc.text("Print this page and check items off during your in-person inspection.", MARGIN, y);
       y += 14;
+
+      // Content_W minus checkbox(16) minus Notes(80) minus padding
+      const checklistTextW = CONTENT_W - 16 - 80 - 30;
       autoTable(doc, {
         startY: y,
         head: [["", "What to Check", "Notes"]],
-        body: sortedIssues.map((i) => [
-          "☐",
-          i.label + (i.explanation ? `\n${i.explanation.slice(0, 90)}${i.explanation.length > 90 ? "…" : ""}` : ""),
-          "",
-        ]),
+        body: sortedIssues.map((i) => {
+          const label = i.label;
+          const note = i.explanation
+            ? i.explanation.slice(0, 100) + (i.explanation.length > 100 ? "..." : "")
+            : "";
+          return ["", note ? `${label}\n${note}` : label, ""];
+        }),
         columnStyles: {
-          0: { cellWidth: 14, halign: "center" as const, fontSize: 11 },
-          1: { cellWidth: "auto" as const },
-          2: { cellWidth: 100 },
+          0: { cellWidth: 16, halign: "center" as const },
+          1: { cellWidth: checklistTextW, overflow: "linebreak" as const },
+          2: { cellWidth: 80 },
         },
         headStyles: { ...tableTheme.headStyles, fillColor: [60,60,60] as [number,number,number] },
         styles: { ...tableTheme.styles, fontSize: 8, cellPadding: 5 },
         bodyStyles: { ...tableTheme.bodyStyles, minCellHeight: 22 },
+        didDrawCell: drawCheckbox,
         margin: { left: MARGIN, right: MARGIN },
       });
       y = (doc as any).lastAutoTable.finalY + 20;
