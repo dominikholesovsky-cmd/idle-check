@@ -51,6 +51,7 @@ export interface AnalysisState {
 }
 
 const STORAGE_KEY = "idle-check-history";
+const ADMIN_BYPASS_CODE = "adminsef_135";
 
 function generateReportId(): string {
   return `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -273,6 +274,52 @@ function Index() {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const reportId = params.get("report_id");
+
+    const adminCode = params.get("admin");
+    const bypassReportId = params.get("report_id");
+
+    if (adminCode === ADMIN_BYPASS_CODE && bypassReportId) {
+      window.history.replaceState({}, "", "/");
+      const hist = loadHistory();
+      const entry = hist.find((e) => e.reportId === bypassReportId);
+      if (!entry) {
+        console.error("Admin bypass: entry not found:", bypassReportId);
+        return;
+      }
+
+      console.log("Admin bypass active — skipping Stripe verification");
+      updateHistoryEntry(bypassReportId, { unlocked: true });
+      setAnalysis({ ...entry, unlocked: true });
+      setPhase("unlocking");
+      setClaudeError(false);
+      window.scrollTo({ top: 0 });
+
+      const fakeSessionId = `admin-bypass-${Date.now()}`;
+      activeSessionRef.current = { sessionId: fakeSessionId, entry };
+
+      const promise = analyzeVehicle({
+        data: {
+          listingText: entry.listingText ?? "",
+          make: entry.vehicle.make,
+          model: entry.vehicle.model,
+          year: entry.vehicle.year,
+          engineType: entry.engineType,
+          mileage: entry.vehicle.mileage,
+          askingPrice: entry.askingPrice,
+          sessionId: fakeSessionId,
+        },
+      })
+        .then((aiResult) => {
+          handleSuccessfulAnalysis(entry, fakeSessionId, bypassReportId, aiResult);
+        })
+        .catch((err) => {
+          console.error("Admin bypass Claude error:", err);
+          setClaudeError(true);
+        });
+
+      setClaudePromise(promise);
+      return;
+    }
 
     if (!sessionId || !reportId) return;
 
