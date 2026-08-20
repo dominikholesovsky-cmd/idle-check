@@ -155,9 +155,92 @@ function Index() {
   const [retryCount, setRetryCount] = useState(0);
   const [shareId, setShareId] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
+  const pendingSaveRef = useRef<{ sessionId: string; reportId: string; reportJson: Record<string, unknown> } | null>(null);
+
+  // Bonus feature (email) must never block UX — 1 retry with a 3s delay, then just log.
+  const attemptSendEmail = async (
+    sessionId: string,
+    reportJson: Record<string, unknown>,
+    shareId: string,
+    attempt = 1,
+  ): Promise<void> => {
+    try {
+      await sendReportEmail({ data: { sessionId, reportJson, shareId } });
+    } catch (err) {
+      console.error(`sendReportEmail failed (attempt ${attempt}):`, err);
+      if (attempt === 1) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await attemptSendEmail(sessionId, reportJson, shareId, attempt + 1);
+      }
+    }
+  };
+
+  const attemptSaveAndEmail = async (
+    sessionId: string,
+    reportId: string,
+    reportJson: Record<string, unknown>,
+  ) => {
+    pendingSaveRef.current = { sessionId, reportId, reportJson };
+    try {
+      const saved = await saveReport({ data: { sessionId, reportJson } });
+      pendingSaveRef.current = null;
+      pendingShareIdRef.current = saved.id;
+      setShareId(saved.id);
+      setSaveError(false);
+      updateHistoryEntry(reportId, { shareId: saved.id });
+      void attemptSendEmail(sessionId, reportJson, saved.id);
+    } catch (err) {
+      console.error("Save failed:", err);
+      setSaveError(true);
+    }
+  };
+
+  const handleRetrySave = () => {
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    void attemptSaveAndEmail(pending.sessionId, pending.reportId, pending.reportJson);
+  };
+
+  // Shared by the post-Stripe effect and handleRetry — builds the upgraded report
+  // from Claude's result, persists it locally, then saves + emails it.
+  const handleSuccessfulAnalysis = (
+    entry: AnalysisState,
+    sessionId: string,
+    reportId: string,
+    aiResult: { issues: Issue[]; sellerRedFlags?: string[]; marketValueNote?: string },
+  ) => {
+    if (aiResult.issues.length > 0) {
+      const newRecommendation = generateRecommendation(
+        entry.vehicle,
+        aiResult.issues,
+        entry.askingPrice
+      );
+      const upgraded: AnalysisState = {
+        ...entry,
+        unlocked: true,
+        issues: aiResult.issues,
+        sellerRedFlags: aiResult.sellerRedFlags,
+        marketValueNote: aiResult.marketValueNote,
+        recommendation: newRecommendation,
+      };
+      setAnalysis(upgraded);
+      updateHistoryEntry(reportId, {
+        unlocked: true,
+        issues: aiResult.issues,
+        sellerRedFlags: aiResult.sellerRedFlags,
+        marketValueNote: aiResult.marketValueNote,
+        recommendation: newRecommendation,
+      });
+      void attemptSaveAndEmail(sessionId, reportId, upgraded as unknown as Record<string, unknown>);
+    } else {
+      console.log("0 issues from Claude, keeping procedural");
+      setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
+    }
+  };
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -251,41 +334,7 @@ function Index() {
       })
         .then(async (aiResult) => {
           console.log("Claude done, issues:", aiResult.issues.length);
-          if (aiResult.issues.length > 0) {
-            const newRecommendation = generateRecommendation(
-              entry.vehicle,
-              aiResult.issues,
-              entry.askingPrice
-            );
-            const upgraded: AnalysisState = {
-              ...entry,
-              unlocked: true,
-              issues: aiResult.issues,
-              sellerRedFlags: aiResult.sellerRedFlags,
-              marketValueNote: aiResult.marketValueNote,
-              recommendation: newRecommendation,
-            };
-            setAnalysis(upgraded);
-            updateHistoryEntry(reportId, {
-              unlocked: true,
-              issues: aiResult.issues,
-              sellerRedFlags: aiResult.sellerRedFlags,
-              marketValueNote: aiResult.marketValueNote,
-              recommendation: newRecommendation,
-            });
-            try {
-              const saved = await saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } });
-              pendingShareIdRef.current = saved.id;
-              setShareId(saved.id);
-              updateHistoryEntry(reportId, { shareId: saved.id });
-              void sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
-            } catch (err) {
-              console.error("Save failed:", err);
-            }
-          } else {
-            console.log("0 issues from Claude, keeping procedural");
-            setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-          }
+          handleSuccessfulAnalysis(entry, sessionId, reportId, aiResult);
         })
         .catch((err) => {
           console.error("Claude error:", err);
@@ -403,36 +452,7 @@ function Index() {
       },
     })
       .then(async (aiResult) => {
-        if (aiResult.issues.length > 0) {
-          const newRecommendation = generateRecommendation(entry.vehicle, aiResult.issues, entry.askingPrice);
-          const upgraded: AnalysisState = {
-            ...entry,
-            unlocked: true,
-            issues: aiResult.issues,
-            sellerRedFlags: aiResult.sellerRedFlags,
-            marketValueNote: aiResult.marketValueNote,
-            recommendation: newRecommendation,
-          };
-          setAnalysis(upgraded);
-          updateHistoryEntry(entry.reportId, {
-            unlocked: true,
-            issues: aiResult.issues,
-            sellerRedFlags: aiResult.sellerRedFlags,
-            marketValueNote: aiResult.marketValueNote,
-            recommendation: newRecommendation,
-          });
-          try {
-            const saved = await saveReport({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown> } });
-            pendingShareIdRef.current = saved.id;
-            setShareId(saved.id);
-            updateHistoryEntry(entry.reportId, { shareId: saved.id });
-            void sendReportEmail({ data: { sessionId, reportJson: upgraded as unknown as Record<string, unknown>, shareId: saved.id } });
-          } catch (err) {
-            console.error("Save failed:", err);
-          }
-        } else {
-          setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
-        }
+        handleSuccessfulAnalysis(entry, sessionId, entry.reportId, aiResult);
       })
       .catch((err) => {
         console.error("Retry failed:", err);
@@ -451,8 +471,10 @@ function Index() {
     setClaudeError(false);
     setRetryCount(0);
     setShareId(null);
+    setSaveError(false);
     pendingEntryRef.current = null;
     activeSessionRef.current = null;
+    pendingSaveRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -526,6 +548,8 @@ function Index() {
             onNewReport={goHome}
             shareId={shareId ?? undefined}
             isDemo={isDemo}
+            saveError={saveError}
+            onRetrySave={handleRetrySave}
           />
         )}
       </main>
