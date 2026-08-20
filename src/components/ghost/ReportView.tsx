@@ -649,6 +649,25 @@ export function ReportView({
             <RecommendationCard recommendation={safeRecommendation} />
           </div>
 
+          {hasRedFlags && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 sm:p-6">
+              <div className="mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  Seller Red Flags · {sellerRedFlags!.length} detected
+                </h2>
+              </div>
+              <ul className="space-y-1.5">
+                {sellerRedFlags!.map((flag, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    <span className="text-[13px] leading-relaxed text-zinc-900">{flag}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Two-column grid: main content + sidebar */}
           <div className="grid gap-6 lg:grid-cols-3">
 
@@ -677,25 +696,6 @@ export function ReportView({
                         <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-900">{marketValueNote}</p>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {hasRedFlags && (
-                  <div className="mt-5 border-t border-gray-100 pt-5">
-                    <div className="mb-2 flex items-center gap-2">
-                      <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-                      <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                        Seller Red Flags · {sellerRedFlags!.length} detected
-                      </h2>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {sellerRedFlags!.map((flag, i) => (
-                        <li key={i} className="flex items-start gap-2.5">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                          <span className="text-[13px] leading-relaxed text-zinc-900">{flag}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 )}
               </div>
