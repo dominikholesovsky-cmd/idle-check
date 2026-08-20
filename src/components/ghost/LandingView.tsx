@@ -323,7 +323,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
       </div>
 
       {/* Right column — form */}
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:mt-0 sm:p-8">
+      <div className="mt-8 rounded-2xl border border-gray-200 bg-white pt-4 px-6 pb-6 shadow-sm md:mt-0 sm:pt-5 sm:px-8 sm:pb-8">
 
       {/* Recent Reports */}
       {history.length > 0 && (
@@ -359,7 +359,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
         </div>
       )}
 
-      <div className="mt-8 space-y-5">
+      <div className="mt-4 space-y-5">
 
         {/* VIN + vehicle fields */}
         <div className="rounded-xl border border-gray-200 bg-white">
