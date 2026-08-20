@@ -44,6 +44,23 @@ function extractJson(text: string): string {
   return cleaned.slice(start, end + 1);
 }
 
+async function callClaudeWithRetry(fn: () => Promise<any>, maxAttempts = 3): Promise<any> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      console.error(`Claude API attempt ${attempt}/${maxAttempts} failed:`, err);
+      if (attempt < maxAttempts) {
+        const delay = attempt * 1000; // 1s, 2s
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export const analyzeVehicle = createServerFn({ method: "POST" })
   .inputValidator(InputSchema)
   .handler(async ({ data }) => {
@@ -89,7 +106,7 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
 
     const client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      timeout: 55000,
+      timeout: 25000,
     });
 
     const vehicleStr = `${year ?? ""} ${make} ${model}${engineType ? ` (${engineType})` : ""}`.trim();
@@ -127,11 +144,13 @@ Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120).
     try {
       console.log("analyzeVehicle: calling Claude for", vehicleStr);
 
-      const message = await client.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 3000,
-        messages: [{ role: "user", content: prompt }],
-      });
+      const message = await callClaudeWithRetry(() =>
+        client.messages.create({
+          model: "claude-haiku-4-5",
+          max_tokens: 3000,
+          messages: [{ role: "user", content: prompt }],
+        })
+      );
 
       const responseText =
         message.content[0].type === "text" ? message.content[0].text : "";
