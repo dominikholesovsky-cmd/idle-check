@@ -23,12 +23,15 @@ export function PaymentLoadingView({
   hasError,
   onRetry,
   retryCount = 0,
+  email,
 }: {
   onDone: () => void;
   claudePromise: Promise<void>;
   hasError: boolean;
   onRetry: () => void;
   retryCount?: number;
+  /** Shown here only: this screen is seen just by the person who paid. */
+  email?: string;
 }) {
   // The promise that has settled. Comparing it with the current `claudePromise`
   // means a retry (new promise) is never treated as already finished.
@@ -178,7 +181,14 @@ export function PaymentLoadingView({
             <path d="m3 7 9 6 9-6" />
           </svg>
           <p className="text-sm leading-[1.45] text-text-2">
-            Keep this tab open. We'll also email a link to the report to the address you paid with.
+            {email ? (
+              <>
+                Keep this tab open. We'll also email a link to the report to{" "}
+                <span className="font-semibold break-all">{email}</span>. It stays saved under that address.
+              </>
+            ) : (
+              "Keep this tab open. We'll also email a link to the report to the address you paid with."
+            )}
           </p>
         </div>
       )}

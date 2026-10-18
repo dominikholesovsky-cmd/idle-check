@@ -617,6 +617,7 @@ function Index() {
             hasError={claudeError}
             onRetry={handleRetry}
             retryCount={retryCount}
+            email={analysis.email}
           />
         )}
 
