@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, FileDown, Flag, Share2, Check, X, Mail, Link, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileDown, Flag, Share2, Check, X, Mail, Link } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
   recommendation, onNewReport,
   sellerRedFlags, marketValueNote, marketValueLow, marketValueHigh, recallSource,
-  shareId, isSharedView, isDemo, saveError, onRetrySave,
+  shareId, isSharedView, isDemo, saveError, onRetrySave, savedToEmail,
 }: {
   vehicle: Vehicle;
   marketplace: string;
@@ -49,12 +49,18 @@ export function ReportView({
   isDemo?: boolean;
   saveError?: boolean;
   onRetrySave?: () => void;
+  /** True when the report is saved under an email. The address itself is never shown here. */
+  savedToEmail?: boolean;
 }) {
   const [checked, setChecked] = useState<Set<string>>(() => defaultChecked(issues));
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedInsta, setCopiedInsta] = useState(false);
+  // Shared by the car pins and the list rows (hover, focus or tap).
+  const [activeFinding, setActiveFinding] = useState<number | null>(null);
+  const [jump, setJump] = useState<{ n: number; nonce: number } | null>(null);
+  const jumpTo = (n: number) => setJump({ n, nonce: Date.now() });
 
   useEffect(() => {
     const onScroll = () => {
@@ -508,16 +514,9 @@ export function ReportView({
   const tickedText = n === 0
     ? "No repairs ticked"
     : `${n} ${allHigh ? "high-priority " : ""}${n === 1 ? "repair" : "repairs"} ticked`;
-  const budgetLabel = n === 0 ? "none ticked" : allHigh ? `${n} high ${n === 1 ? "item" : "items"}` : `${n} ${n === 1 ? "item" : "items"} ticked`;
   const script = buildNegotiationScript({
     vehicle, askingPrice: displayPrice, checkedIssues, repairTotal, suggestedOffer,
   });
-  const openRecalls = recalls.filter((r) => r.status === "Open").length;
-  const recallStat = recalls.length === 0
-    ? { n: 0, text: "none found" }
-    : openRecalls > 0
-    ? { n: openRecalls, text: "open" }
-    : { n: recalls.length, text: "remedied" };
 
   const marketplaceShown = marketplace && marketplace.trim().toLowerCase() !== "the listing" ? marketplace : "";
   const metaTop = [vehicle.engineType, mileageStr].filter(Boolean).join(" · ");
@@ -539,6 +538,27 @@ export function ReportView({
       </div>
       <p className="mt-2 text-sm text-muted-text">Asking {usd(displayPrice)} · {tickedText}</p>
     </>
+  );
+
+  const redFlags = hasRedFlags && (
+    <section
+      aria-label="Seller red flags"
+      className="rounded-card border border-primary-tint-border bg-primary-tint p-[18px] lg:px-5 lg:py-[18px]"
+    >
+      <h2 className="font-condensed text-[15px] font-bold uppercase tracking-[0.12em] text-primary-ink">
+        {sellerRedFlags!.length} seller red {sellerRedFlags!.length === 1 ? "flag" : "flags"}
+      </h2>
+      <ul className="mt-3 flex flex-col gap-3">
+        {sellerRedFlags!.map((flag, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary-tint-border bg-white text-primary-ink">
+              <Flag aria-hidden="true" className="h-3.5 w-3.5" />
+            </span>
+            <span className="pt-[3px] text-[15px] leading-[1.45] text-[#2b2b2a]">{flag}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 
   return (
@@ -588,6 +608,12 @@ export function ReportView({
                 {vehicle.vin && (
                   <p className="mt-1 font-mono text-xs text-muted-text">VIN: {vehicle.vin}</p>
                 )}
+                {savedToEmail && (
+                  <span className="mt-3 inline-flex h-7 items-center gap-1.5 rounded-full border border-success-border bg-success-bg px-3 text-[13px] font-semibold text-success">
+                    <Mail aria-hidden="true" className="h-3.5 w-3.5" />
+                    Saved to your email
+                  </span>
+                )}
               </div>
 
               <div className="flex shrink-0 flex-col items-end gap-3">
@@ -631,98 +657,84 @@ export function ReportView({
               </div>
             )}
 
-            {/* Car with numbered pins */}
-            <FindingsCar body={bodyStyleFor({ model: vehicle.model })} pins={pins} />
+            {/* Hero. On mobile these are plain siblings (car, verdict, offer); on desktop the verdict
+                sits left and the car and red flags stack on the right. */}
+            <div className="contents lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-x-6 lg:gap-y-4">
+              <div className="lg:col-start-2 lg:row-start-1">
+                <FindingsCar
+                  body={bodyStyleFor({ model: vehicle.model })}
+                  pins={pins}
+                  findings={sortedIssues}
+                  active={activeFinding}
+                  onActive={setActiveFinding}
+                  onJump={jumpTo}
+                />
+              </div>
 
-            {/* Verdict. On desktop it also carries the ruler and the copy button. */}
-            <RecommendationCard recommendation={safeRecommendation}>
-              <div className="hidden lg:block">
+              <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
+                <RecommendationCard recommendation={safeRecommendation}>
+                  <div className="mt-5 hidden lg:block">
+                    <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+                      Your offer vs. the market
+                    </h3>
+                    <PriceRuler {...rulerProps} />
+                  </div>
+                </RecommendationCard>
+              </div>
+
+              {/* Mobile offer card */}
+              <section aria-label="Suggested offer" className="rounded-card border-2 border-primary bg-white p-[18px] lg:hidden">
+                {offerHeader}
                 <div className="mt-5">
                   <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
                     Your offer vs. the market
                   </h3>
                   <PriceRuler {...rulerProps} />
                 </div>
+                <div className="mt-3.5 border-t border-card-border pt-3.5">
+                  <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
+                </div>
                 <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
-              </div>
-            </RecommendationCard>
+              </section>
 
-            {/* Mobile offer card */}
-            <section aria-label="Suggested offer" className="rounded-card border-2 border-primary bg-white p-[18px] lg:hidden">
-              {offerHeader}
-              <div className="mt-5">
-                <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
-                  Your offer vs. the market
-                </h3>
-                <PriceRuler {...rulerProps} />
-              </div>
-              <div className="mt-3.5 border-t border-card-border pt-3.5">
-                <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
-              </div>
-              <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
-            </section>
-
-            {/* Desktop tiles */}
-            <div className="hidden lg:col-span-2 lg:grid lg:grid-cols-3 lg:gap-4">
-              <RepairCostTracker variant="tile" partsTotal={partsTotal} repairTotal={repairTotal} label={budgetLabel} />
-              <div className="flex items-center gap-3.5 rounded-card border border-card-border bg-white px-[22px] py-5">
-                <span className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-primary-tint-border bg-primary-tint text-primary-ink">
-                  <Flag aria-hidden="true" className="h-6 w-6" />
-                </span>
-                <div>
-                  <div className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-muted-text">Seller red flags</div>
-                  <div className="mt-1 font-mono text-[30px] font-bold leading-none">
-                    {hasRedFlags ? sellerRedFlags!.length : 0}{" "}
-                    <span className="font-sans text-[15px] font-medium text-text-2">{hasRedFlags ? "detected" : "none detected"}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3.5 rounded-card border border-card-border bg-white px-[22px] py-5">
-                <span className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-success-border bg-success-bg text-success">
-                  <ShieldCheck aria-hidden="true" className="h-6 w-6" />
-                </span>
-                <div>
-                  <div className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-muted-text">NHTSA recalls</div>
-                  <div className="mt-1 font-mono text-[30px] font-bold leading-none">
-                    {recallStat.n}{" "}
-                    <span className="font-sans text-[15px] font-medium text-text-2">{recallStat.text}</span>
-                  </div>
-                </div>
-              </div>
+              {/* Desktop red flags sit under the car */}
+              {hasRedFlags && <div className="hidden lg:col-start-2 lg:row-start-2 lg:block">{redFlags}</div>}
             </div>
 
-            {/* Left column: red flags and findings */}
-            <div className="flex min-w-0 flex-col gap-4">
-              {hasRedFlags && (
-                <section
-                  aria-label="Seller red flags"
-                  className="rounded-card border border-primary-tint-border bg-primary-tint p-[18px] lg:px-6 lg:py-[22px]"
-                >
-                  <h2 className="font-condensed text-[15px] font-bold uppercase tracking-[0.12em] text-primary-ink">
-                    {sellerRedFlags!.length} seller red {sellerRedFlags!.length === 1 ? "flag" : "flags"}
-                  </h2>
-                  <ul className="mt-3 flex flex-col gap-3">
-                    {sellerRedFlags!.map((flag, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary-tint-border bg-white text-primary-ink">
-                          <Flag aria-hidden="true" className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="pt-[3px] text-[15px] leading-[1.45] text-[#2b2b2a]">{flag}</span>
-                      </li>
-                    ))}
-                  </ul>
+            {/* Main row: findings on the left, offer and recalls in a sticky column on desktop */}
+            <div className="contents lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-x-6">
+              <div className="flex min-w-0 flex-col gap-4">
+                {hasRedFlags && <div className="lg:hidden">{redFlags}</div>}
+                <FindingsList
+                  findings={sortedIssues}
+                  checked={checked}
+                  onToggle={toggle}
+                  active={activeFinding}
+                  onActive={setActiveFinding}
+                  jump={jump}
+                />
+              </div>
+
+              <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+                {/* Desktop offer card: offer, budget, message */}
+                <section aria-label="Suggested offer" className="hidden rounded-card border-2 border-primary bg-white p-[22px] lg:block">
+                  {offerHeader}
+                  <div className="mt-3.5 border-t border-card-border pt-3.5">
+                    <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
+                  </div>
+                  <div className="mt-4">
+                    <NegotiationScript
+                      variant="panel"
+                      vehicle={vehicle}
+                      askingPrice={displayPrice}
+                      checkedIssues={checkedIssues}
+                      repairTotal={repairTotal}
+                      suggestedOffer={suggestedOffer}
+                    />
+                  </div>
                 </section>
-              )}
-              <FindingsList findings={sortedIssues} checked={checked} onToggle={toggle} />
-            </div>
-
-            {/* Right column on desktop: offer, message, recalls. On mobile: message and recalls. */}
-            <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-              <section aria-label="Suggested offer" className="hidden rounded-card border-2 border-primary bg-white p-[22px] lg:block">
-                {offerHeader}
-                <div className="mt-3.5">
+                <div className="mt-2 lg:hidden">
                   <NegotiationScript
-                    variant="panel"
                     vehicle={vehicle}
                     askingPrice={displayPrice}
                     checkedIssues={checkedIssues}
@@ -730,18 +742,9 @@ export function ReportView({
                     suggestedOffer={suggestedOffer}
                   />
                 </div>
-              </section>
-              <div className="mt-2 lg:hidden">
-                <NegotiationScript
-                  vehicle={vehicle}
-                  askingPrice={displayPrice}
-                  checkedIssues={checkedIssues}
-                  repairTotal={repairTotal}
-                  suggestedOffer={suggestedOffer}
-                />
-              </div>
-              <RecallSection recalls={recalls} badge={recallBadge} className="" />
-            </aside>
+                <RecallSection recalls={recalls} badge={recallBadge} className="" />
+              </aside>
+            </div>
 
             <p className="border-t border-card-border pt-4 text-[13px] leading-[1.5] text-muted-text lg:col-span-2 lg:mt-4 lg:text-sm">
               Estimates are for informational purposes. Always have a licensed mechanic inspect the car before you buy.

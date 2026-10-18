@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { URGENCY_LABEL } from "@/lib/ghost/report";
 import type { Issue, Severity } from "@/lib/ghost/types";
@@ -24,10 +24,18 @@ export function FindingsList({
   findings,
   checked,
   onToggle,
+  active,
+  onActive,
+  jump,
 }: {
   findings: Issue[];
   checked: Set<string>;
   onToggle: (id: string) => void;
+  /** Finding highlighted by hover, focus or tap anywhere (list rows and car pins share it). */
+  active: number | null;
+  onActive: (n: number | null) => void;
+  /** Ask the list to scroll to a finding, expand it and focus it. */
+  jump: { n: number; nonce: number } | null;
 }) {
   const uid = useId();
   const key = findings.map((f) => f.id).join("|");
@@ -40,6 +48,24 @@ export function FindingsList({
     const id = firstHighId(findings);
     setOpen(new Set(id ? [id] : []));
   }, [key]);
+
+  // Read through a ref so the effect only reacts to a new jump request, not to every re-sort.
+  const findingsRef = useRef(findings);
+  findingsRef.current = findings;
+
+  useEffect(() => {
+    if (!jump) return;
+    const issue = findingsRef.current[jump.n - 1];
+    if (!issue) return;
+    setOpen((prev) => new Set(prev).add(issue.id));
+    const frame = requestAnimationFrame(() => {
+      const row = document.getElementById(`${uid}-row-${issue.id}`);
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      row?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+      row?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jump, uid]);
 
   const toggleOpen = (id: string) =>
     setOpen((prev) => {
@@ -71,7 +97,19 @@ export function FindingsList({
           const sev = SEV[issue.severity] ?? SEV.LOW;
 
           return (
-            <li key={issue.id} className="border-b border-card-border last:border-b-0">
+            <li
+              key={issue.id}
+              id={`${uid}-row-${issue.id}`}
+              data-n={n}
+              tabIndex={-1}
+              onMouseEnter={() => onActive(n)}
+              onMouseLeave={() => onActive(null)}
+              onFocus={() => onActive(n)}
+              onBlur={() => onActive(null)}
+              className={`border-b border-card-border outline-none transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary motion-reduce:transition-none ${
+                active === n ? "bg-row-highlight" : ""
+              }`}
+            >
               <div className="flex items-start gap-3 px-4 py-3.5 lg:gap-3.5 lg:px-5 lg:py-[18px]">
                 <input
                   id={boxId}

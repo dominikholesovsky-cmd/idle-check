@@ -1,45 +1,142 @@
 import { CarIllustration } from "./CarIllustration";
 import { CAR_CROP, CAR_CROP_VIEWBOX, pinPercent, type BodyStyle, type Pin } from "@/lib/ghost/report";
+import type { Issue, Severity } from "@/lib/ghost/types";
 
-const PIN_CLASS = {
+function usd(n: number): string {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+}
+
+const PIN_COLOR: Record<Severity, string> = {
   HIGH: "bg-sev-high text-sev-high-fg",
   MED: "bg-sev-med text-sev-med-fg",
   LOW: "bg-sev-low text-sev-low-fg",
-} as const;
+};
 
-function PinBadge({ pin, left, top }: { pin: Pin; left: number; top: number }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`absolute inline-flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white font-condensed text-sm font-bold ${PIN_CLASS[pin.severity]}`}
-      style={{ left: `${left}%`, top: `${top}%` }}
-    >
-      {pin.number}
-    </span>
-  );
+function costLine(issue: Issue): string {
+  return `${usd(issue.partsCostMin)}–${Math.round(issue.partsCostMax).toLocaleString("en-US")} parts · ${issue.labourHours} h labor`;
 }
 
-// Car illustration with a numbered pin per finding. Mobile shows the front half of the car
-// (cropped), desktop the whole car. The pin numbers match the findings list.
-export function FindingsCar({ body, pins }: { body: BodyStyle; pins: Pin[] }) {
+// The car, always cropped to the same window, with a numbered pin per finding. Pin numbers match the
+// findings list. Desktop: hover or focus a pin for a tooltip, click to jump to the finding.
+// Mobile: tap a pin to see its description in the caption bar; "Details" jumps to the finding.
+export function FindingsCar({
+  body,
+  pins,
+  findings,
+  active,
+  onActive,
+  onJump,
+}: {
+  body: BodyStyle;
+  pins: Pin[];
+  /** Findings in display order, so findings[n - 1] is finding n. */
+  findings: Issue[];
+  /** Finding highlighted by hover, focus or tap. */
+  active: number | null;
+  onActive: (n: number | null) => void;
+  onJump: (n: number) => void;
+}) {
+  // On mobile the first finding is selected until the user picks another one.
+  const captionN = active ?? 1;
+  const caption = findings[captionN - 1];
+
+  const handlePinClick = (n: number) => {
+    if (window.matchMedia("(min-width: 1024px)").matches) onJump(n);
+    else onActive(n);
+  };
+
   return (
     <section
       aria-label="Findings on the car"
-      className="flex flex-col justify-center rounded-[18px] border border-panel-border bg-panel p-3.5 lg:rounded-hero lg:p-[18px]"
+      className="rounded-[18px] border border-panel-border bg-panel px-3.5 pb-3.5 pt-3.5 lg:px-[18px] lg:pb-3.5 lg:pt-4"
     >
-      <h2 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
-        Findings on the car
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+          Findings on the car
+        </h2>
+        <span className="text-[13px] text-muted-text">
+          <span className="lg:hidden">Tap a pin</span>
+          <span className="hidden lg:inline">Hover a pin</span>
+        </span>
+      </div>
 
-      <div className="relative mt-1 w-full" style={{ aspectRatio: `${CAR_CROP.width} / ${CAR_CROP.height}` }}>
+      <div
+        className="relative mt-2 w-full lg:mt-10"
+        style={{ aspectRatio: `${CAR_CROP.width} / ${CAR_CROP.height}` }}
+      >
         <CarIllustration body={body} viewBox={CAR_CROP_VIEWBOX} className="h-full w-full" decorative />
-        {pins.map((p) => {
-          const pos = pinPercent(p);
-          return <PinBadge key={p.number} pin={p} left={pos.left} top={pos.top} />;
+        {pins.map((pin) => {
+          const issue = findings[pin.number - 1];
+          if (!issue) return null;
+          const pos = pinPercent(pin);
+          const isActive = active === pin.number;
+          // Mobile only: the default selection gets the ring until the user taps something.
+          const defaultRing = active === null && pin.number === 1;
+          const alignRight = pos.left > 65;
+          return (
+            <button
+              key={pin.number}
+              type="button"
+              data-n={pin.number}
+              aria-label={`Finding ${pin.number}: ${issue.label}`}
+              onMouseEnter={() => onActive(pin.number)}
+              onMouseLeave={() => onActive(null)}
+              onFocus={() => onActive(pin.number)}
+              onBlur={() => onActive(null)}
+              onClick={() => handlePinClick(pin.number)}
+              style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
+              className={`group absolute z-[1] inline-flex h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 font-condensed text-sm font-bold transition-shadow before:absolute before:-inset-1 before:content-[''] hover:z-[6] hover:shadow-[0_0_0_3px_#121212] focus-visible:z-[6] focus-visible:shadow-[0_0_0_3px_#121212] focus-visible:outline-none motion-reduce:transition-none ${PIN_COLOR[pin.severity]} ${
+                isActive ? "z-[6] shadow-[0_0_0_3px_#121212]" : defaultRing ? "z-[5] shadow-[0_0_0_3px_#121212] lg:z-[1] lg:shadow-none" : ""
+              }`}
+            >
+              {pin.number}
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute bottom-[calc(100%+12px)] z-[9] hidden w-[236px] rounded-[10px] border border-input-border bg-white px-3 py-2.5 text-left font-sans text-[13px] font-normal leading-[1.35] text-ink shadow-[0_8px_20px_rgba(18,18,18,0.14)] lg:group-hover:block lg:group-focus-visible:block ${
+                  alignRight ? "-right-2.5" : "left-1/2 -translate-x-1/2"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={`inline-flex h-[22px] items-center rounded px-2 font-condensed text-xs font-bold tracking-[0.08em] ${PIN_COLOR[issue.severity]}`}>
+                    {issue.severity}
+                  </span>
+                  <strong className="text-sm leading-tight">{issue.label}</strong>
+                </span>
+                <span className="mt-1.5 block font-mono text-xs text-text-2">{costLine(issue)}</span>
+                <span className="mt-1 block text-xs text-muted-text">Click to jump to the finding</span>
+              </span>
+            </button>
+          );
         })}
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-text-2">
+      {/* Mobile caption bar for the selected pin */}
+      {caption && (
+        <div
+          aria-live="polite"
+          className="mt-2.5 flex items-center gap-3 rounded-xl border border-panel-border bg-white py-2 pl-3 pr-1 lg:hidden"
+        >
+          <span
+            aria-hidden="true"
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-condensed text-sm font-bold ${PIN_COLOR[caption.severity]}`}
+          >
+            {captionN}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold leading-tight">{caption.label}</div>
+            <div className="mt-0.5 font-mono text-xs text-muted-text">{costLine(caption)}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onJump(captionN)}
+            className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Details
+          </button>
+        </div>
+      )}
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13px] text-text-2">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-sev-high" /> High
         </span>
@@ -49,7 +146,10 @@ export function FindingsCar({ body, pins }: { body: BodyStyle; pins: Pin[] }) {
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-input-border" /> Low
         </span>
-        <span className="text-muted-text">Numbers match the findings below.</span>
+        <span className="text-muted-text">
+          Numbers match the <span className="lg:hidden">list</span>
+          <span className="hidden lg:inline">findings</span> below.
+        </span>
       </div>
     </section>
   );

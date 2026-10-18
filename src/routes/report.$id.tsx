@@ -62,6 +62,7 @@ function SharedReport() {
           recommendation={report.recommendation}
           sellerRedFlags={report.sellerRedFlags}
           marketValueNote={report.marketValueNote}
+          savedToEmail={report.savedToEmail}
           marketValueLow={report.marketValueLow}
           marketValueHigh={report.marketValueHigh}
           recallSource={report.recallSource}

@@ -5,31 +5,25 @@ function usd(n: number): string {
 }
 
 // Presentational only: the totals come from ReportView (one calculation for the whole report).
-// `tile` is the standalone desktop card, `inline` sits inside another card.
+// Sits inside another card.
 export function RepairCostTracker({
   partsTotal,
   repairTotal,
-  label,
-  variant = "inline",
 }: {
   partsTotal: number;
   repairTotal: number;
-  /** Extra text after "Repair budget", e.g. "2 high items". */
-  label?: string;
-  variant?: "tile" | "inline";
 }) {
   const partsRounded = Math.min(repairTotal, round100(partsTotal));
   const labourRounded = repairTotal - partsRounded; // parts + labor always add up to the total
   const partsPct = repairTotal > 0 ? (partsRounded / repairTotal) * 100 : 0;
-  const tile = variant === "tile";
 
   return (
-    <div className={tile ? "rounded-card border border-card-border bg-white px-[22px] py-5" : ""}>
-      <div className={`flex items-baseline justify-between gap-3 ${tile ? "flex-col items-start gap-0" : ""}`}>
-        <span className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2 lg:text-muted-text">
-          Repair budget{label ? ` · ${label}` : ""}
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+          Repair budget
         </span>
-        <span className={`font-mono font-bold ${tile ? "mt-1.5 text-[30px]" : "text-[22px]"}`}>
+        <span className="font-mono text-[22px] font-bold">
           {repairTotal > 0 ? "~" : ""}{usd(repairTotal)}
         </span>
       </div>

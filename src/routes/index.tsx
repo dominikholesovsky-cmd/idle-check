@@ -631,6 +631,7 @@ function Index() {
             recommendation={analysis.recommendation}
             sellerRedFlags={analysis.sellerRedFlags}
             marketValueNote={analysis.marketValueNote}
+            savedToEmail={!!analysis.email || analysis.savedToEmail}
             marketValueLow={analysis.marketValueLow}
             marketValueHigh={analysis.marketValueHigh}
             recallSource={analysis.recallSource}
