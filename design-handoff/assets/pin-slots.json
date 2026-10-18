@@ -1,0 +1,138 @@
+{
+  "_note": "x,y are in the 520x224 viewBox of the car SVGs. Assign pins in finding order, picking the next free slot of the finding's category zone. Skip a pin when its zone has no free slot (the finding stays in the list). On mobile the report crops the car to viewBox '236 64 252 150', so only slots with 236<=x<=488 and 64<=y<=214 are shown there.",
+  "pinSizePx": 24,
+  "sedan": {
+    "Engine & Drivetrain": [
+      [
+        424,
+        134
+      ],
+      [
+        396,
+        129
+      ],
+      [
+        368,
+        124
+      ],
+      [
+        340,
+        120
+      ],
+      [
+        457,
+        155
+      ]
+    ],
+    "Chassis & Suspension": [
+      [
+        386,
+        150
+      ],
+      [
+        388,
+        178
+      ],
+      [
+        142,
+        150
+      ],
+      [
+        142,
+        178
+      ]
+    ],
+    "Body & Electrical": [
+      [
+        300,
+        142
+      ],
+      [
+        205,
+        100
+      ],
+      [
+        210,
+        142
+      ],
+      [
+        100,
+        134
+      ]
+    ]
+  },
+  "roadster": {
+    "Engine & Drivetrain": [
+      [
+        420,
+        139
+      ],
+      [
+        392,
+        134
+      ],
+      [
+        364,
+        128
+      ],
+      [
+        338,
+        123
+      ],
+      [
+        457,
+        156
+      ]
+    ],
+    "Chassis & Suspension": [
+      [
+        382,
+        150
+      ],
+      [
+        382,
+        178
+      ],
+      [
+        140,
+        150
+      ],
+      [
+        140,
+        178
+      ]
+    ],
+    "Body & Electrical": [
+      [
+        222,
+        86
+      ],
+      [
+        276,
+        140
+      ],
+      [
+        92,
+        150
+      ],
+      [
+        100,
+        126
+      ]
+    ]
+  },
+  "severityColors": {
+    "HIGH": {
+      "bg": "#b32228",
+      "fg": "#ffffff"
+    },
+    "MED": {
+      "bg": "#f59e0b",
+      "fg": "#121212"
+    },
+    "LOW": {
+      "bg": "#e5e4e2",
+      "fg": "#3f3f3d"
+    }
+  }
+}
