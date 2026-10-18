@@ -73,6 +73,7 @@
   --color-success-bg: var(--success-bg);
   --color-success-border: var(--success-border);
   --color-market-band: var(--market-band);
+  --color-row-highlight: var(--row-highlight);
   --radius-card: 16px;
   --radius-card-sm: 14px;
   --radius-hero: 20px;
@@ -140,6 +141,7 @@
   --success-bg: #e9f4ee;
   --success-border: #cfe5d8;
   --market-band: #8cc7a6;
+  --row-highlight: #fff8e8;
 }
 
 .dark {
