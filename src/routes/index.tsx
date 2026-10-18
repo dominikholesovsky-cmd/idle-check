@@ -157,6 +157,9 @@ function Index() {
   const [shareId, setShareId] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [scanInfo, setScanInfo] = useState<{ vehicleLabel: string; meta: string; hasVin: boolean }>({
+    vehicleLabel: "", meta: "", hasVin: false,
+  });
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
@@ -208,7 +211,7 @@ function Index() {
 
   // Shared by the post-Stripe effect and handleRetry — builds the upgraded report
   // from Claude's result, persists it locally, then saves + emails it.
-  const handleSuccessfulAnalysis = (
+  const handleSuccessfulAnalysis = async (
     entry: AnalysisState,
     sessionId: string,
     reportId: string,
@@ -236,7 +239,7 @@ function Index() {
         marketValueNote: aiResult.marketValueNote,
         recommendation: newRecommendation,
       });
-      void attemptSaveAndEmail(sessionId, reportId, upgraded as unknown as Record<string, unknown>);
+      await attemptSaveAndEmail(sessionId, reportId, upgraded as unknown as Record<string, unknown>);
     } else {
       console.log("0 issues from Claude, keeping procedural");
       setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
@@ -309,8 +312,8 @@ function Index() {
           sessionId: fakeSessionId,
         },
       })
-        .then((aiResult) => {
-          handleSuccessfulAnalysis(entry, fakeSessionId, bypassReportId, aiResult);
+        .then(async (aiResult) => {
+          await handleSuccessfulAnalysis(entry, fakeSessionId, bypassReportId, aiResult);
         })
         .catch((err) => {
           console.error("Admin bypass Claude error:", err);
@@ -381,7 +384,7 @@ function Index() {
       })
         .then(async (aiResult) => {
           console.log("Claude done, issues:", aiResult.issues.length);
-          handleSuccessfulAnalysis(entry, sessionId, reportId, aiResult);
+          await handleSuccessfulAnalysis(entry, sessionId, reportId, aiResult);
         })
         .catch((err) => {
           console.error("Claude error:", err);
@@ -405,6 +408,12 @@ function Index() {
     const marketplace = detectMarketplace(data.manualText);
     const reportId = generateReportId();
 
+    const mileageNum = Number(data.mileage);
+    setScanInfo({
+      vehicleLabel: `${vehicle.year ?? ""} ${vehicle.make} ${vehicle.model}`.trim(),
+      meta: `${mileageNum > 0 ? `${mileageNum.toLocaleString("en-US")} mi · ` : ""}Asking $${data.askingPrice.toLocaleString("en-US")}`,
+      hasVin: !!data.vin && data.vin.length === 17,
+    });
     setPhase("scanning");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -499,7 +508,7 @@ function Index() {
       },
     })
       .then(async (aiResult) => {
-        handleSuccessfulAnalysis(entry, sessionId, entry.reportId, aiResult);
+        await handleSuccessfulAnalysis(entry, sessionId, entry.reportId, aiResult);
       })
       .catch((err) => {
         console.error("Retry failed:", err);
@@ -549,6 +558,9 @@ function Index() {
           <ScanningView
             onDone={() => setAnimationReady(true)}
             apiReady={true}
+            vehicleLabel={scanInfo.vehicleLabel}
+            meta={scanInfo.meta}
+            hasVin={scanInfo.hasVin}
           />
         )}
 

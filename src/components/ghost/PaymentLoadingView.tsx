@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, RotateCcw, Mail } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LoadingLayout, type LoadingStep } from "./LoadingLayout";
+import { PRICE_USD, SUPPORT_EMAIL } from "@/lib/ghost/constants";
 
-const UNLOCK_LINES = [
-  "Verifying payment with Stripe...",
-  "Payment confirmed.",
-  "Decrypting full analysis...",
-  "Loading repair cost breakdown...",
-  "Calculating negotiation leverage...",
-  "Preparing your negotiation script...",
-  "Report unlocked.",
+const LISTING_READ_MS = 800; // "Reading the listing text" completes on a timer
+const TAIL_STEP_MS = 300;    // the last three steps complete quickly once the AI step is done
+const DONE_DELAY_MS = 400;
+
+const LABELS = [
+  "Verifying payment",
+  "Reading the listing text",
+  "Finding model-specific issues",
+  "Pricing parts and labor",
+  "Writing your negotiation script",
+  "Saving your report link",
 ];
-
-const SUPPORT_EMAIL = "idlecheckapp@gmail.com";
+const AI_IDX = 2;
 
 export function PaymentLoadingView({
   onDone,
@@ -27,149 +30,158 @@ export function PaymentLoadingView({
   onRetry: () => void;
   retryCount?: number;
 }) {
-  const [visible, setVisible] = useState<string[]>([]);
-  const [current, setCurrent] = useState("");
-  const [lineIdx, setLineIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
-  const [animDone, setAnimDone] = useState(false);
-  const [claudeDone, setClaudeDone] = useState(false);
+  // The promise that has settled. Comparing it with the current `claudePromise`
+  // means a retry (new promise) is never treated as already finished.
+  const [settled, setSettled] = useState<Promise<void> | null>(null);
+  const [listingRead, setListingRead] = useState(false);
+  const [tailDone, setTailDone] = useState(0); // 0 to 3
   const firedRef = useRef(false);
   const onDoneRef = useRef(onDone);
 
   useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
 
   useEffect(() => {
-    claudePromise.then(() => {
-      setClaudeDone(true);
-    }).catch(() => {
-      setClaudeDone(true);
-    });
+    let cancelled = false;
+    const mark = () => { if (!cancelled) setSettled(claudePromise); };
+    claudePromise.then(mark, mark);
+    return () => { cancelled = true; };
   }, [claudePromise]);
 
-  // Typewriter animation
   useEffect(() => {
-    if (animDone) return;
-    if (lineIdx >= UNLOCK_LINES.length) { setAnimDone(true); return; }
-    const line = UNLOCK_LINES[lineIdx];
-    if (charIdx <= line.length) {
-      const t = setTimeout(() => {
-        setCurrent(line.slice(0, charIdx));
-        setCharIdx((c) => c + 1);
-      }, 22);
-      return () => clearTimeout(t);
-    }
-    const delay = line === "Payment confirmed." ? 600 : 350;
-    const t = setTimeout(() => {
-      setVisible((v) => [...v, line]);
-      setCurrent("");
-      setCharIdx(0);
-      setLineIdx((i) => i + 1);
-    }, delay);
+    const t = setTimeout(() => setListingRead(true), LISTING_READ_MS);
     return () => clearTimeout(t);
-  }, [lineIdx, charIdx, animDone]);
+  }, []);
 
-  // Transition to report only when both done AND no error
+  const aiSettled = settled === claudePromise;
+  const aiDone = aiSettled && !hasError && listingRead;
+
+  // Last three steps advance only after the AI step is done
   useEffect(() => {
-    if (animDone && claudeDone && !hasError && !firedRef.current) {
-      firedRef.current = true;
-      const t = setTimeout(() => onDoneRef.current(), 400);
-      return () => clearTimeout(t);
-    }
-  }, [animDone, claudeDone, hasError]);
+    if (!aiDone || tailDone >= 3) return;
+    const t = setTimeout(() => setTailDone((c) => c + 1), TAIL_STEP_MS);
+    return () => clearTimeout(t);
+  }, [aiDone, tailDone]);
 
-  const waiting = animDone && !claudeDone;
-  const showError = animDone && claudeDone && hasError;
+  // Redirect only when every step, including the last, is complete
+  useEffect(() => {
+    if (!aiDone || tailDone < 3) return;
+    const t = setTimeout(() => {
+      if (firedRef.current) return;
+      firedRef.current = true;
+      onDoneRef.current();
+    }, DONE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [aiDone, tailDone]);
+
+  const steps: LoadingStep[] = LABELS.map((label, i) => {
+    if (i === 0) return { label, state: "done", tag: `$${PRICE_USD.toFixed(2)}` };
+    if (i === 1) {
+      return listingRead
+        ? { label, state: "done", tag: "Done" }
+        : { label, state: "active", tag: "Working" };
+    }
+    if (i === AI_IDX) {
+      if (hasError) return { label, state: "error", tag: "Failed" };
+      if (aiDone) return { label, state: "done", tag: "Done" };
+      if (listingRead) return { label, state: "active", tag: "AI" };
+      return { label, state: "pending" };
+    }
+    const tailIdx = i - AI_IDX - 1;
+    if (tailIdx < tailDone) return { label, state: "done", tag: "Done" };
+    if (tailIdx === tailDone && aiDone) return { label, state: "active", tag: "Working" };
+    return { label, state: "pending" };
+  });
+
+  const doneCount = steps.filter((s) => s.state === "done").length;
+  const allDone = doneCount === LABELS.length;
+  const activeLabel = steps.find((s) => s.state === "active")?.label ?? LABELS[AI_IDX];
+  const liveMessage = hasError
+    ? "Analysis failed"
+    : allDone
+    ? "Report ready"
+    : `Step ${Math.min(doneCount + 1, LABELS.length)} of ${LABELS.length}: ${activeLabel}`;
+
   const isPermanent = retryCount >= 1;
-  const isFinalLine = (s: string) => s === "Report unlocked.";
 
   return (
-    <section className="view-fade-in relative z-10 mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 bg-[#f5f4f0] min-h-screen">
-      <div className="rounded-xl border border-zinc-800 bg-[#0a0a0a] p-6 font-mono text-sm shadow-2xl sm:p-8">
-        <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-xs uppercase tracking-wider text-white/60">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-          <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
-          <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-          <span className="ml-3">idle-check // unlock.sh</span>
-        </div>
-        <div className="space-y-2">
-          {visible.map((line, i) => (
-            <div key={i} className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className={
-                isFinalLine(line) ? "text-[#B22222]" :
-                line === "Payment confirmed." ? "text-emerald-400" :
-                "text-green-400"
-              }>
-                {line}
-              </span>
-            </div>
-          ))}
-          {!animDone && (
-            <div className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className="text-green-400">
-                {current}
-                <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-green-400 align-middle" />
-              </span>
-            </div>
-          )}
-          {waiting && (
-            <div className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className="flex items-center gap-1 text-yellow-400/80">
-                Finalizing your report
-                <span className="inline-flex gap-[3px] ml-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </span>
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Error state — shown below terminal after animation completes */}
-      {showError && (
-        <div className="view-fade-in mt-6 rounded-xl border border-gray-200 bg-white p-6">
+    <LoadingLayout
+      pill={
+        <>
+          <svg
+            aria-hidden="true"
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <path d="m5 12 5 5 9-10" />
+          </svg>
+          Payment confirmed
+        </>
+      }
+      pillClassName="border-success-border bg-success-bg text-success"
+      title="Building your full report"
+      progressLabel="Report progress"
+      stepLabel={`Step ${Math.min(doneCount + 1, LABELS.length)} of ${LABELS.length}`}
+      timeLabel="Usually under 30 seconds"
+      steps={steps}
+      dense
+      liveMessage={liveMessage}
+    >
+      {hasError ? (
+        <div role="alert" className="mt-4 rounded-card-sm border border-card-border bg-white p-5">
           <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-            <div className="flex-1">
+            <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
               {isPermanent ? (
                 <>
-                  <p className="font-semibold text-zinc-900">Analysis failed twice — we'll refund your payment.</p>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="font-semibold text-ink">Analysis failed twice — we'll refund your payment.</p>
+                  <p className="mt-1 text-sm text-muted-text">
                     Something is wrong on our end. Reply to your receipt or email us and we'll refund you within 24 hours.
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="font-semibold text-zinc-900">Analysis failed — please try again.</p>
-                  <p className="mt-1 text-sm text-zinc-500">
+                  <p className="font-semibold text-ink">Analysis failed — please try again.</p>
+                  <p className="mt-1 text-sm text-muted-text">
                     The AI analysis didn't complete. Your payment was captured. One retry is available at no extra charge.
                   </p>
                 </>
               )}
               <a
                 href={`mailto:${SUPPORT_EMAIL}?subject=Idle Check analysis failed`}
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:underline"
+                className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 rounded text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <Mail className="h-3.5 w-3.5" />
+                <Mail aria-hidden="true" className="h-3.5 w-3.5" />
                 {SUPPORT_EMAIL}
               </a>
             </div>
           </div>
           {!isPermanent && (
-            <Button
+            <button
+              type="button"
               onClick={onRetry}
-              className="mt-4 w-full bg-red-800 text-white hover:bg-red-700"
+              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-field bg-primary text-base font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
               Try again
-            </Button>
+            </button>
           )}
         </div>
+      ) : (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-card-border bg-white px-4 py-3.5">
+          <svg
+            aria-hidden="true"
+            className="mt-px shrink-0"
+            width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="#646360" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+          <p className="text-sm leading-[1.45] text-text-2">
+            Keep this tab open. We'll also email a link to the report to the address you paid with.
+          </p>
+        </div>
       )}
-    </section>
+    </LoadingLayout>
   );
 }

@@ -1,101 +1,81 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LoadingLayout, type LoadingStep } from "./LoadingLayout";
 
-const SCAN_LINES = [
-  "Reading listing text...",
-  "Pulling NHTSA recall records...",
-  "Matching known failure patterns...",
-  "Estimating repair costs...",
-  "Report ready.",
-];
+// Steps 0 to 2 finish on short timers. The last step waits for `apiReady`.
+const STEP_MS = [800, 900, 800];
+const DONE_DELAY_MS = 400;
 
 export function ScanningView({
   onDone,
   apiReady,
+  vehicleLabel,
+  meta,
+  hasVin = false,
 }: {
   onDone: () => void;
   apiReady: boolean;
+  vehicleLabel?: string;
+  meta?: string;
+  hasVin?: boolean;
 }) {
-  const [visible, setVisible] = useState<string[]>([]);
-  const [current, setCurrent] = useState("");
-  const [lineIdx, setLineIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
-  const [animDone, setAnimDone] = useState(false);
+  const labels = [
+    hasVin ? "Decoding VIN" : "Reading vehicle details",
+    "Pulling NHTSA recall records",
+    "Matching known failure points",
+    "Building your free preview",
+  ];
+  const lastIdx = labels.length - 1;
 
+  // Number of completed steps, 0 to labels.length.
+  const [doneCount, setDoneCount] = useState(0);
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
+
+  // Timed steps
   useEffect(() => {
-    if (animDone) return;
-    if (lineIdx >= SCAN_LINES.length) {
-      setAnimDone(true);
-      return;
-    }
-    const line = SCAN_LINES[lineIdx];
-    if (charIdx <= line.length) {
-      const t = setTimeout(() => {
-        setCurrent(line.slice(0, charIdx));
-        setCharIdx((c) => c + 1);
-      }, 18);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => {
-      setVisible((v) => [...v, line]);
-      setCurrent("");
-      setCharIdx(0);
-      setLineIdx((i) => i + 1);
-    }, 400);
+    if (doneCount >= lastIdx) return;
+    const t = setTimeout(() => setDoneCount((c) => c + 1), STEP_MS[doneCount] ?? 800);
     return () => clearTimeout(t);
-  }, [lineIdx, charIdx, animDone]);
+  }, [doneCount, lastIdx]);
 
+  // Final step completes only once the data is ready
   useEffect(() => {
-    if (animDone && apiReady) {
-      const t = setTimeout(onDone, 400);
-      return () => clearTimeout(t);
-    }
-  }, [animDone, apiReady]);
+    if (doneCount === lastIdx && apiReady) setDoneCount(labels.length);
+  }, [doneCount, lastIdx, apiReady, labels.length]);
 
-  const waiting = animDone && !apiReady;
-  const isFinalLine = (s: string) => s.trim() === "Report ready.";
+  // Never fires before every step, including the final one, is complete
+  useEffect(() => {
+    if (doneCount < labels.length) return;
+    const t = setTimeout(() => onDoneRef.current(), DONE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [doneCount, labels.length]);
+
+  const steps: LoadingStep[] = labels.map((label, i) => {
+    if (i < doneCount) return { label, state: "done", tag: "Done" };
+    if (i === doneCount) return { label, state: "active", tag: "Working" };
+    return { label, state: "pending" };
+  });
+
+  const stepNumber = Math.min(doneCount + 1, labels.length);
+  const liveMessage =
+    doneCount >= labels.length ? "Preview ready" : `Step ${stepNumber} of ${labels.length}: ${labels[doneCount]}`;
 
   return (
-    <section className="view-fade-in relative z-10 mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24 bg-[#f5f4f0] min-h-screen">
-      <div className="rounded-xl border border-zinc-800 bg-[#0a0a0a] p-6 font-mono text-sm shadow-2xl sm:p-8">
-        <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-xs uppercase tracking-wider text-white/60">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-          <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
-          <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-          <span className="ml-3">idle-check // analysis.sh</span>
-        </div>
-        <div className="space-y-2">
-          {visible.map((line, i) => (
-            <div key={i} className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className={isFinalLine(line) ? "text-[#B22222]" : "text-green-400"}>
-                {line}
-              </span>
-            </div>
-          ))}
-          {!animDone && (
-            <div className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className="text-green-400">
-                {current}
-                <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-green-400 align-middle" />
-              </span>
-            </div>
-          )}
-          {waiting && (
-            <div className="flex gap-2">
-              <span className="text-green-500">$</span>
-              <span className="flex items-center gap-1 text-yellow-400/80">
-                Fetching live part prices
-                <span className="inline-flex gap-[3px] ml-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </span>
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
+    <LoadingLayout
+      pill="Analyzing"
+      title={vehicleLabel || "Your vehicle"}
+      subtitle={
+        meta ? <p className="mt-2 font-mono text-[13px] text-muted-text">{meta}</p> : null
+      }
+      progressLabel="Analysis progress"
+      stepLabel={`Step ${stepNumber} of ${labels.length}`}
+      timeLabel="A few seconds"
+      steps={steps}
+      liveMessage={liveMessage}
+    >
+      <p className="mt-4 text-center text-sm text-muted-text">
+        Your first 3 findings are free. No account needed.
+      </p>
+    </LoadingLayout>
   );
 }
