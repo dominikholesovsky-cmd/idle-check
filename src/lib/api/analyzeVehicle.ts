@@ -72,7 +72,7 @@ async function callClaudeWithRetry(fn: () => Promise<any>, maxAttempts = 3): Pro
 }
 
 export const analyzeVehicle = createServerFn({ method: "POST" })
-  .inputValidator(InputSchema)
+  .validator(InputSchema)
   .handler(async ({ data }) => {
     const input = data?.data ?? data;
     const listingText = input?.listingText ?? "";

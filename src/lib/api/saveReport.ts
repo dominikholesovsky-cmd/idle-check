@@ -8,7 +8,7 @@ const InputSchema = z.object({
 });
 
 export const saveReport = createServerFn({ method: "POST" })
-  .inputValidator(InputSchema)
+  .validator(InputSchema)
   .handler(async ({ data }) => {
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL!,

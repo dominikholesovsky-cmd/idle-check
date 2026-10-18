@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 
 export const loadReportBySession = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ sessionId: z.string() }))
+  .validator(z.object({ sessionId: z.string() }))
   .handler(async ({ data }) => {
     const supabase = createClient(
       process.env.VITE_SUPABASE_URL!,

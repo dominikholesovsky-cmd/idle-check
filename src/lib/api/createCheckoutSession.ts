@@ -10,7 +10,7 @@ const InputSchema = z.object({
 });
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
-  .inputValidator(InputSchema)
+  .validator(InputSchema)
   .handler(async ({ data }) => { // OPRAVA: Změněno zpět na { data }
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 

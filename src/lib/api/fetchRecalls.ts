@@ -25,7 +25,7 @@ function parseNhtsaDate(raw: any): string {
 }
 
 export const fetchRecalls = createServerFn({ method: "POST" })
-  .inputValidator(InputSchema)
+  .validator(InputSchema)
   .handler(async ({ data: input }) => {
     const recalls: Recall[] = [];
     try {

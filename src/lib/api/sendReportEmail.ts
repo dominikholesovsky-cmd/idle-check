@@ -132,7 +132,7 @@ function buildHtml(report: AnalysisState, shareUrl: string | null): string {
 }
 
 export const sendReportEmail = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       sessionId: z.string(),
       reportJson: z.record(z.unknown()),

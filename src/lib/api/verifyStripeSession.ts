@@ -3,7 +3,7 @@ import { z } from "zod";
 import Stripe from "stripe";
 
 export const verifyStripeSession = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ sessionId: z.string() }))
+  .validator(z.object({ sessionId: z.string() }))
   .handler(async ({ data }) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const session = await stripe.checkout.sessions.retrieve(data.sessionId);
