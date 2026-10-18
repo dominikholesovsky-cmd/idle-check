@@ -1,8 +1,5 @@
 import { CarIllustration } from "./CarIllustration";
-import { MOBILE_CROP, inMobileCrop, type BodyStyle, type Pin } from "@/lib/ghost/report";
-
-const FULL_W = 520;
-const FULL_H = 224;
+import { CAR_CROP, CAR_CROP_VIEWBOX, pinPercent, type BodyStyle, type Pin } from "@/lib/ghost/report";
 
 const PIN_CLASS = {
   HIGH: "bg-sev-high text-sev-high-fg",
@@ -25,8 +22,6 @@ function PinBadge({ pin, left, top }: { pin: Pin; left: number; top: number }) {
 // Car illustration with a numbered pin per finding. Mobile shows the front half of the car
 // (cropped), desktop the whole car. The pin numbers match the findings list.
 export function FindingsCar({ body, pins }: { body: BodyStyle; pins: Pin[] }) {
-  const cropViewBox = `${MOBILE_CROP.x} ${MOBILE_CROP.y} ${MOBILE_CROP.width} ${MOBILE_CROP.height}`;
-
   return (
     <section
       aria-label="Findings on the car"
@@ -36,27 +31,12 @@ export function FindingsCar({ body, pins }: { body: BodyStyle; pins: Pin[] }) {
         Findings on the car
       </h2>
 
-      {/* Mobile: cropped */}
-      <div className="relative mt-1 w-full lg:hidden" style={{ aspectRatio: `${MOBILE_CROP.width} / ${MOBILE_CROP.height}` }}>
-        <CarIllustration body={body} viewBox={cropViewBox} className="h-full w-full" decorative />
-        {pins
-          .filter((p) => inMobileCrop(p.x, p.y))
-          .map((p) => (
-            <PinBadge
-              key={p.number}
-              pin={p}
-              left={((p.x - MOBILE_CROP.x) / MOBILE_CROP.width) * 100}
-              top={((p.y - MOBILE_CROP.y) / MOBILE_CROP.height) * 100}
-            />
-          ))}
-      </div>
-
-      {/* Desktop: whole car */}
-      <div className="relative mt-1 hidden w-full lg:block" style={{ aspectRatio: `${FULL_W} / ${FULL_H}` }}>
-        <CarIllustration body={body} className="h-full w-full" decorative />
-        {pins.map((p) => (
-          <PinBadge key={p.number} pin={p} left={(p.x / FULL_W) * 100} top={(p.y / FULL_H) * 100} />
-        ))}
+      <div className="relative mt-1 w-full" style={{ aspectRatio: `${CAR_CROP.width} / ${CAR_CROP.height}` }}>
+        <CarIllustration body={body} viewBox={CAR_CROP_VIEWBOX} className="h-full w-full" decorative />
+        {pins.map((p) => {
+          const pos = pinPercent(p);
+          return <PinBadge key={p.number} pin={p} left={pos.left} top={pos.top} />;
+        })}
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-text-2">

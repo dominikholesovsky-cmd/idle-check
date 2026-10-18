@@ -56,32 +56,36 @@ export function bodyStyleFor(vehicle: Pick<Vehicle, "model">): BodyStyle {
 type Slots = Record<Category, [number, number][]>;
 
 // Positions in the 520x224 viewBox of the car SVGs (from design-handoff/assets/pin-slots.json).
+// Every slot lies inside CAR_CROP: the report always shows the car cropped to that window.
 const PIN_SLOTS: Record<BodyStyle, Slots> = {
   sedan: {
-    "Engine & Drivetrain": [[424, 134], [396, 129], [368, 124], [340, 120], [457, 155]],
-    "Chassis & Suspension": [[386, 150], [388, 178], [142, 150], [142, 178]],
-    "Body & Electrical": [[300, 142], [205, 100], [210, 142], [100, 134]],
+    "Engine & Drivetrain": [[424, 134], [396, 129], [368, 124], [457, 155], [340, 120]],
+    "Chassis & Suspension": [[384, 152], [388, 178], [290, 176]],
+    "Body & Electrical": [[300, 142], [205, 100], [230, 142]],
   },
   roadster: {
-    "Engine & Drivetrain": [[420, 139], [392, 134], [364, 128], [338, 123], [457, 156]],
-    "Chassis & Suspension": [[382, 150], [382, 178], [140, 150], [140, 178]],
-    "Body & Electrical": [[222, 86], [276, 140], [92, 150], [100, 126]],
+    "Engine & Drivetrain": [[420, 139], [392, 134], [364, 128], [457, 156], [338, 123]],
+    "Chassis & Suspension": [[382, 150], [382, 178], [290, 176]],
+    "Body & Electrical": [[222, 86], [276, 140], [200, 126]],
   },
 };
 
-/** The mobile report crops the car to this window. */
-export const MOBILE_CROP = { x: 236, y: 64, width: 252, height: 150 };
+/** The report shows the car cropped to this window on every screen size. */
+export const CAR_CROP = { x: 160, y: 74, width: 330, height: 134 };
+export const CAR_CROP_VIEWBOX = `${CAR_CROP.x} ${CAR_CROP.y} ${CAR_CROP.width} ${CAR_CROP.height}`;
 
-export function inMobileCrop(x: number, y: number): boolean {
-  return (
-    x >= MOBILE_CROP.x && x <= MOBILE_CROP.x + MOBILE_CROP.width &&
-    y >= MOBILE_CROP.y && y <= MOBILE_CROP.y + MOBILE_CROP.height
-  );
+/** Position of a pin as percentages of the cropped car. */
+export function pinPercent(pin: { x: number; y: number }): { left: number; top: number } {
+  return {
+    left: ((pin.x - CAR_CROP.x) / CAR_CROP.width) * 100,
+    top: ((pin.y - CAR_CROP.y) / CAR_CROP.height) * 100,
+  };
 }
 
 export interface Pin {
   /** Finding number: position in the sorted list, starting at 1. */
   number: number;
+  issueId: string;
   severity: Severity;
   x: number;
   y: number;
@@ -100,7 +104,7 @@ export function assignPins(sortedFindings: Issue[], body: BodyStyle): Pin[] {
     if (next >= slots.length) return;
     used[issue.category] = next + 1;
     const [x, y] = slots[next];
-    pins.push({ number: i + 1, severity: issue.severity, x, y });
+    pins.push({ number: i + 1, issueId: issue.id, severity: issue.severity, x, y });
   });
   return pins;
 }
