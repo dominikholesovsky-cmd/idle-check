@@ -1,80 +1,60 @@
 import { LABOUR_RATE, round100 } from "@/lib/ghost/report";
 
-// Presentational only: the totals and the offer come from ReportView (one calculation).
+function usd(n: number): string {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+}
+
+// Presentational only: the totals come from ReportView (one calculation for the whole report).
+// `tile` is the standalone desktop card, `inline` sits inside another card.
 export function RepairCostTracker({
-  count,
   partsTotal,
   repairTotal,
-  suggestedOffer,
-  embedded = false,
+  label,
+  variant = "inline",
 }: {
-  count: number;
   partsTotal: number;
   repairTotal: number;
-  suggestedOffer: number;
-  embedded?: boolean;
+  /** Extra text after "Repair budget", e.g. "2 high items". */
+  label?: string;
+  variant?: "tile" | "inline";
 }) {
   const partsRounded = Math.min(repairTotal, round100(partsTotal));
-  const labourRounded = repairTotal - partsRounded; // parts + labour always add up to the total
-  const grandTotal = repairTotal;
+  const labourRounded = repairTotal - partsRounded; // parts + labor always add up to the total
+  const partsPct = repairTotal > 0 ? (partsRounded / repairTotal) * 100 : 0;
+  const tile = variant === "tile";
 
   return (
-    <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-white p-5"}>
-      <div className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-        Estimated US Repair Budget
-      </div>
-      <div className="mt-2 font-mono text-3xl font-bold tabular-nums text-zinc-900 sm:text-4xl">
-        ${grandTotal.toLocaleString()}
-      </div>
-      <div className="mt-1 font-condensed text-[11px] uppercase tracking-wider text-zinc-500">
-        {count} {count === 1 ? "item" : "items"} flagged
-      </div>
-
-      {count > 0 && (
-        <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-          <div className="flex items-start justify-between gap-3 text-[13px]">
-            <div>
-              <span className="font-medium text-zinc-900">Parts only</span>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
-                Sourced from RockAuto / eBay Motors
-              </p>
-            </div>
-            <span className="shrink-0 font-mono font-semibold text-zinc-900">
-              ~${partsRounded.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-start justify-between gap-3 text-[13px]">
-            <div>
-              <span className="font-medium text-zinc-600">Labour estimate</span>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
-                @ ${LABOUR_RATE}/hr · varies by shop
-              </p>
-            </div>
-            <span className="shrink-0 font-mono font-semibold text-zinc-600">
-              ~${labourRounded.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-[13px]">
-            <span className="font-medium text-zinc-900">Total estimate</span>
-            <span className="font-mono font-bold text-zinc-900">
-              ~${grandTotal.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {count === 0 && (
-        <p className="mt-4 text-[12px] text-zinc-500">
-          Tick items in the checklist to build your repair budget.
-        </p>
-      )}
-
-      <div className="mt-4 border-t border-gray-100 pt-3 text-[13px] text-zinc-500">
-        Suggested opening offer:{" "}
-        <span className="font-mono font-semibold text-zinc-900">
-          ${suggestedOffer.toLocaleString()}
+    <div className={tile ? "rounded-card border border-card-border bg-white px-[22px] py-5" : ""}>
+      <div className={`flex items-baseline justify-between gap-3 ${tile ? "flex-col items-start gap-0" : ""}`}>
+        <span className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2 lg:text-muted-text">
+          Repair budget{label ? ` · ${label}` : ""}
+        </span>
+        <span className={`font-mono font-bold ${tile ? "mt-1.5 text-[30px]" : "text-[22px]"}`}>
+          {repairTotal > 0 ? "~" : ""}{usd(repairTotal)}
         </span>
       </div>
+
+      {repairTotal > 0 ? (
+        <>
+          <div className="mt-3 flex h-2 overflow-hidden rounded bg-card-border" aria-hidden="true">
+            <span className="bg-primary" style={{ width: `${partsPct}%` }} />
+            <span className="bg-ink" style={{ width: `${100 - partsPct}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between gap-3 text-[13px] text-text-2">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary" />
+              Parts ~{usd(partsRounded)}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />
+              Labor ~{usd(labourRounded)}
+            </span>
+          </div>
+          <p className="mt-1.5 text-[13px] text-muted-text">Labor at ${LABOUR_RATE}/h. Shops vary.</p>
+        </>
+      ) : (
+        <p className="mt-2 text-[13px] text-muted-text">Tick findings to build your repair budget.</p>
+      )}
     </div>
   );
 }

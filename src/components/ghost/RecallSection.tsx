@@ -1,50 +1,69 @@
 import type { Recall } from "@/lib/ghost/types";
 
-export function RecallSection({ recalls }: { recalls: Recall[] }) {
-  return (
-    <section className="mt-10 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-      <h2 className="font-condensed text-sm font-semibold uppercase tracking-[0.14em] text-zinc-900">
-        Official Recall Records
-      </h2>
-      <p className="mt-1 text-[13px] text-zinc-500">
-        Sourced directly from the NHTSA database — these are federally documented safety issues for
-        this exact make, model, and year.
-      </p>
+function sentenceCase(text: string): string {
+  const t = text.toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 
-      <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
-        <table className="w-full text-left text-[13px]">
-          <thead className="bg-gray-50 font-condensed text-[11px] uppercase tracking-wider text-zinc-500">
-            <tr>
-              <th className="px-4 py-2.5 font-semibold">Recall Date</th>
-              <th className="px-4 py-2.5 font-semibold">Component</th>
-              <th className="px-4 py-2.5 font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {recalls.map((r) => (
-              <tr key={r.id} className="bg-white">
-                <td className="px-4 py-3 font-mono text-[12px] tabular-nums text-zinc-600">
-                  {r.date}
-                </td>
-                <td className="px-4 py-3 text-zinc-700">{r.component}</td>
-                <td className="px-4 py-3">
+// Recall records card. `badge` is the live-data note (e.g. "Live NHTSA · VIN verified").
+// `className` defaults to the top margin the SEO pages rely on.
+export function RecallSection({
+  recalls,
+  badge,
+  className = "mt-10",
+}: {
+  recalls: Recall[];
+  badge?: { label: string; verified: boolean };
+  className?: string;
+}) {
+  return (
+    <section
+      aria-label="NHTSA recalls"
+      className={`rounded-card border border-card-border bg-white p-[18px] lg:p-[22px] ${className}`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-condensed text-[15px] font-bold uppercase tracking-[0.12em]">
+          NHTSA recalls · {recalls.length}
+        </h2>
+        {badge && (
+          <span className={`text-right text-xs ${badge.verified ? "text-success" : "text-muted-text"}`}>
+            {badge.label}
+          </span>
+        )}
+      </div>
+
+      {recalls.length === 0 ? (
+        <p className="mt-3 border-t border-card-border pt-3 text-sm text-muted-text">
+          No recall records found for this vehicle.
+        </p>
+      ) : (
+        <ul>
+          {recalls.map((r) => {
+            const open = r.status === "Open";
+            return (
+              <li key={r.id} className="mt-3 border-t border-card-border pt-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[15px] font-semibold">{sentenceCase(r.component || "Unknown")}</span>
                   <span
-                    className={`font-condensed text-[11px] font-semibold uppercase tracking-wider ${
-                      r.status === "Open" ? "text-red-600" : "text-emerald-600"
+                    className={`inline-flex h-[22px] shrink-0 items-center rounded px-2 font-condensed text-xs font-bold uppercase tracking-[0.08em] ${
+                      open ? "bg-primary-tint text-primary-ink" : "bg-success-bg text-success"
                     }`}
                   >
                     {r.status}
                   </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+                <p className="mt-1 font-mono text-xs text-muted-text">{r.date}</p>
+                {r.description && (
+                  <p className="mt-1.5 text-sm leading-[1.45] text-text-2">{r.description}</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
-      <p className="mt-3 text-[11px] text-zinc-400">
-        Recall data is pulled from the NHTSA public database. Always verify current recall status at
-        nhtsa.gov.
+      <p className="mt-3 text-xs text-muted-text">
+        Recall data is pulled from the NHTSA public database. Always verify current recall status at nhtsa.gov.
       </p>
     </section>
   );

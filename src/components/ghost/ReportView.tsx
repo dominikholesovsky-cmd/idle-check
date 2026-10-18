@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Shield, ShieldCheck, FileDown, Share2, Check, X, Mail, Link } from "lucide-react";
-import { HelpTooltip } from "./HelpTooltip";
+import { AlertTriangle, FileDown, Flag, Share2, Check, X, Mail, Link, ShieldCheck } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
-import { InspectionChecklist } from "./InspectionChecklist";
 import { RepairCostTracker } from "./RepairCostTracker";
-import { NegotiationScript } from "./NegotiationScript";
+import { NegotiationScript, CopyMessageButton, buildNegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
-import { RecommendationCard, MaintenanceRoadmap } from "./RecommendationCard";
+import { RecommendationCard } from "./RecommendationCard";
+import { PriceRuler } from "./PriceRuler";
+import { FindingsCar } from "./FindingsCar";
+import { FindingsList } from "./FindingsList";
 import { generateRecommendation } from "@/lib/ghost/procedural";
-import { computeOffer, sortFindings } from "@/lib/ghost/report";
+import { assignPins, bodyStyleFor, computeOffer, sortFindings } from "@/lib/ghost/report";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
+
+function usd(n: number): string {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+}
 
 // HIGH-severity findings start ticked, so the budget and offer are not $0 on first view.
 function defaultChecked(issues: Issue[]): Set<string> {
   return new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id));
 }
+
+const ACTION_BTN =
+  "inline-flex h-11 w-11 items-center justify-center gap-2 rounded-lg border border-card-border bg-white font-condensed text-sm font-semibold uppercase tracking-[0.06em] text-ink transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:w-auto lg:px-4";
 
 export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
@@ -44,32 +52,9 @@ export function ReportView({
 }) {
   const [checked, setChecked] = useState<Set<string>>(() => defaultChecked(issues));
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [activeSection, setActiveSection] = useState<string>("verdict");
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedInsta, setCopiedInsta] = useState(false);
-
-  useEffect(() => {
-    const ids = ["section-verdict", "section-issues", "section-negotiation", "section-recalls"];
-    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
-    if (!els.length) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveSection(visible.target.id.replace("section-", ""));
-      },
-      { rootMargin: "-30% 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
-
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(`section-${id}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   useEffect(() => {
     const onScroll = () => {
@@ -109,11 +94,10 @@ export function ReportView({
   // One offer calculation for the whole report
   const { partsTotal, repairTotal, suggestedOffer } = computeOffer(checkedIssues, askingPrice || 0);
 
-  const recommendedIds = useMemo(() => {
-    return Array.isArray(issues)
-      ? new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id))
-      : new Set<string>();
-  }, [issues]);
+  const pins = useMemo(
+    () => assignPins(sortedIssues, bodyStyleFor({ model: vehicle?.model ?? "" })),
+    [sortedIssues, vehicle?.model],
+  );
 
   const safeRecommendation = useMemo(() => {
     if (recommendation && recommendation.verdict) return recommendation;
@@ -122,7 +106,7 @@ export function ReportView({
 
   if (!vehicle) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-8 text-center text-muted-text">
         Loading vehicle data...
       </div>
     );
@@ -130,17 +114,18 @@ export function ReportView({
 
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
   const trimStr = vehicle.trim ? ` (${vehicle.trim})` : "";
-  const mileageStr = vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} mi` : "";
+  const mileageStr = vehicle.mileage != null ? `${vehicle.mileage.toLocaleString("en-US")} mi` : "";
   const displayPrice = askingPrice || 0;
   const hasRedFlags = Array.isArray(sellerRedFlags) && sellerRedFlags.length > 0;
   const hasMarketNote = marketValueNote && marketValueNote.trim().length > 0;
   const vehicleName = `${yearStr}${vehicle.make} ${vehicle.model}${trimStr}`.trim();
 
-  const recallBadge = recallSource === "vin"
-    ? { label: "Live NHTSA · VIN verified", Icon: ShieldCheck, color: "text-emerald-600" }
-    : recallSource === "nhtsa"
-    ? { label: "Live NHTSA · Make/Model/Year", Icon: Shield, color: "text-emerald-600" }
-    : { label: "Estimated recall data", Icon: Shield, color: "text-zinc-400" };
+  const recallBadge =
+    recallSource === "vin"
+      ? { label: "Live NHTSA · VIN verified", verified: true }
+      : recallSource === "nhtsa"
+      ? { label: "Live NHTSA · Make/Model/Year", verified: true }
+      : { label: "Estimated recall data", verified: false };
 
   const exportPdf = () => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -515,243 +500,238 @@ export function ReportView({
     doc.save(fname);
   };
 
-  const navItems = [
-    { id: "verdict", label: "Verdict" },
-    { id: "issues", label: "Issues" },
-    { id: "negotiation", label: "Negotiation" },
-    { id: "recalls", label: "Recalls" },
-  ];
-
   const shareUrl = shareId ? `${typeof window !== "undefined" ? window.location.origin : "https://idle-check.com"}/report/${shareId}` : "";
+
+  // Derived text for the offer and budget blocks
+  const n = checkedIssues.length;
+  const allHigh = n > 0 && checkedIssues.every((i) => i.severity === "HIGH");
+  const tickedText = n === 0
+    ? "No repairs ticked"
+    : `${n} ${allHigh ? "high-priority " : ""}${n === 1 ? "repair" : "repairs"} ticked`;
+  const budgetLabel = n === 0 ? "none ticked" : allHigh ? `${n} high ${n === 1 ? "item" : "items"}` : `${n} ${n === 1 ? "item" : "items"} ticked`;
+  const script = buildNegotiationScript({
+    vehicle, askingPrice: displayPrice, checkedIssues, repairTotal, suggestedOffer,
+  });
+  const openRecalls = recalls.filter((r) => r.status === "Open").length;
+  const recallStat = recalls.length === 0
+    ? { n: 0, text: "none found" }
+    : openRecalls > 0
+    ? { n: openRecalls, text: "open" }
+    : { n: recalls.length, text: "remedied" };
+
+  const marketplaceShown = marketplace && marketplace.trim().toLowerCase() !== "the listing" ? marketplace : "";
+  const metaTop = [vehicle.engineType, mileageStr].filter(Boolean).join(" · ");
+  const metaBottom = [marketplaceShown, `Asking ${usd(displayPrice)}`].filter(Boolean).join(" · ");
+
+  const rulerProps = {
+    offer: suggestedOffer,
+    asking: displayPrice,
+    marketLow: marketValueLow,
+    marketHigh: marketValueHigh,
+    note: hasMarketNote ? marketValueNote : undefined,
+  };
+
+  const offerHeader = (
+    <>
+      <div className="font-condensed text-sm font-bold uppercase tracking-[0.12em] text-text-2">Suggested cash offer</div>
+      <div className="mt-1.5 font-mono text-[44px] font-bold leading-none text-primary" aria-live="polite">
+        {usd(suggestedOffer)}
+      </div>
+      <p className="mt-2 text-sm text-muted-text">Asking {usd(displayPrice)} · {tickedText}</p>
+    </>
+  );
 
   return (
     <>
       {/* Fixed scroll progress bar */}
       <div className="fixed left-0 right-0 top-0 z-50 h-[3px] bg-transparent" aria-hidden>
         <div
-          className="h-full origin-left bg-gradient-to-r from-primary/70 to-primary shadow-[0_0_12px_rgba(220,38,38,0.6)] transition-[width] duration-150 ease-out"
+          className="h-full origin-left bg-primary transition-[width] duration-150 ease-out motion-reduce:transition-none"
           style={{ width: `${scrollProgress * 100}%` }}
         />
       </div>
 
-      {/* Fixed left sidebar */}
-      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[200px] border-r border-gray-200 bg-[#f5f4f0] lg:block">
-        <div className="absolute left-0 top-0 h-full w-[3px] bg-transparent" aria-hidden>
-          <div
-            className="w-full bg-primary shadow-[0_0_12px_rgba(220,38,38,0.5)] transition-[height] duration-150 ease-out"
-            style={{ height: `${scrollProgress * 100}%` }}
-          />
-        </div>
-        <div className="flex h-full flex-col px-5 py-6">
-          <button
-            type="button"
-            onClick={onNewReport}
-            className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-70"
-          >
-            IDLE CHECK
-          </button>
-          <nav className="mt-10 flex flex-col gap-1">
-            {navItems.map((item) => {
-              const active = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => scrollToSection(item.id)}
-                  className={`flex items-center border-l-2 py-2 pl-3 text-left font-condensed text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                    active
-                      ? "border-red-700 text-red-700"
-                      : "border-transparent text-zinc-600 hover:text-zinc-900"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </aside>
+      <div
+        className="relative z-10 min-h-screen text-ink"
+        style={{
+          backgroundColor: "#f5f4f0",
+          backgroundImage: "radial-gradient(circle, #c8c4bc 0.8px, transparent 0.8px)",
+          backgroundSize: "20px 20px",
+        }}
+      >
+        <div className="mx-auto max-w-[1120px] px-4 pb-10 pt-[18px] lg:px-6 lg:pt-7">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-6">
 
-      <div className="lg:pl-[200px]">
-        <section className="view-fade-in relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-
-          {/* Status bar */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Title block */}
+            <header className="flex items-start justify-between gap-3 lg:col-span-2 lg:items-end lg:gap-8 lg:pb-1">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-condensed text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Full Report Unlocked
+                  <span className="inline-flex h-[26px] items-center rounded-full border border-card-border bg-chip px-2.5 font-condensed text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                    Full report
                   </span>
                   {isDemo && (
-                    <span className="rounded border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
+                    <span className="rounded border border-card-border bg-white px-1.5 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-muted-text">
                       Demo
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-base font-bold text-zinc-900 sm:text-lg">
+                <h1 className="mt-3 font-condensed text-[34px] font-bold uppercase leading-none tracking-[0.01em] lg:text-5xl">
                   {vehicleName}
-                  {vehicle.engineType && (
-                    <span className="ml-2 font-condensed text-[13px] font-normal text-zinc-500">
-                      {vehicle.engineType}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-0.5 text-[12px] text-zinc-500">
-                  {mileageStr && <>{mileageStr} · </>}Asked on {marketplace || "Unknown"}
-                  {vehicle.vin && <span className="ml-2 font-mono text-[11px]">VIN: {vehicle.vin}</span>}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-right">
-                  <div className="font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                    Asking Price
-                  </div>
-                  <div className="font-mono text-xl font-bold tabular-nums text-zinc-900">
-                    ${displayPrice.toLocaleString()}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {shareId && (
-                    <Button
-                      onClick={() => setShowShareModal(true)}
-                      variant="outline"
-                      size="sm"
-                      className="h-9 gap-1.5 border-gray-200 font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                      Share
-                    </Button>
-                  )}
-                  <Button
-                    onClick={exportPdf}
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 border-gray-200 font-condensed text-xs font-semibold uppercase tracking-wider hover:border-primary hover:text-primary"
-                  >
-                    <FileDown className="h-3.5 w-3.5" />
-                    Export PDF
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {saveError && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                <span className="text-[13px] text-amber-800">
-                  Couldn't generate a shareable link — your report is still valid, refresh to retry.
-                </span>
-              </div>
-              {onRetrySave && (
-                <Button
-                  onClick={onRetrySave}
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-amber-300 font-condensed text-xs font-semibold uppercase tracking-wider text-amber-800 hover:bg-amber-100"
-                >
-                  Retry
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Verdict — full width */}
-          <div id="section-verdict" className="mb-6">
-            <RecommendationCard recommendation={safeRecommendation} />
-          </div>
-
-          {hasRedFlags && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 sm:p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-                <h2 className="font-condensed text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                  Seller Red Flags · {sellerRedFlags!.length} detected
-                </h2>
-              </div>
-              <ul className="space-y-1.5">
-                {sellerRedFlags!.map((flag, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <span className="text-[13px] leading-relaxed text-zinc-900">{flag}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Two-column grid: main content + sidebar */}
-          <div className="grid gap-6 lg:grid-cols-3">
-
-            {/* ── Main column ── */}
-            <div className="space-y-6 lg:col-span-2">
-
-              {/* Roadmap + Market Value + Red Flags */}
-              <div className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-                <div className="mb-4 flex items-center gap-1.5">
-                  <h3 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Maintenance Roadmap
-                  </h3>
-                  <HelpTooltip text="Items grouped by urgency based on this vehicle's condition" />
-                </div>
-                <MaintenanceRoadmap recommendation={safeRecommendation} issues={issues} />
-
-                {hasMarketNote && (
-                  <div className="mt-5 border-t border-gray-100 pt-5">
-                    <div className="flex items-start gap-3">
-                      <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-                      <div>
-                        <span className="flex items-center gap-1.5 font-condensed text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                          Market Value
-                          <HelpTooltip text="Estimated fair price based on this vehicle's age, mileage, and condition" />
-                        </span>
-                        <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-900">{marketValueNote}</p>
-                      </div>
-                    </div>
-                  </div>
+                </h1>
+                <p className="mt-2 font-mono text-[13px] leading-[1.6] text-muted-text lg:hidden">
+                  {metaTop && <>{metaTop}<br /></>}
+                  {metaBottom}
+                </p>
+                <p className="mt-2.5 hidden font-mono text-sm text-muted-text lg:block">
+                  {[vehicle.engineType, mileageStr, marketplaceShown].filter(Boolean).join(" · ")}
+                </p>
+                {vehicle.vin && (
+                  <p className="mt-1 font-mono text-xs text-muted-text">VIN: {vehicle.vin}</p>
                 )}
               </div>
 
-              {/* Inspection Checklist */}
-              <div id="section-issues" className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <h2 className="font-condensed text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                      Inspection Checklist
-                    </h2>
-                    <HelpTooltip text="Check items during your in-person inspection to build a custom repair budget" />
-                  </span>
-                  {recommendedIds.size > 0 && (
-                    <span className="font-condensed text-[11px] text-zinc-500">
-                      <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" />
-                      {recommendedIds.size} recommended
-                    </span>
+              <div className="flex shrink-0 flex-col items-end gap-3">
+                <div className="flex gap-2">
+                  {shareId && (
+                    <button type="button" onClick={() => setShowShareModal(true)} aria-label="Share report" className={ACTION_BTN}>
+                      <Share2 aria-hidden="true" className="h-[18px] w-[18px]" />
+                      <span className="hidden lg:inline">Share</span>
+                    </button>
                   )}
+                  <button type="button" onClick={exportPdf} aria-label="Download PDF" className={ACTION_BTN}>
+                    <FileDown aria-hidden="true" className="h-[18px] w-[18px]" />
+                    <span className="hidden lg:inline">PDF</span>
+                  </button>
                 </div>
-                <InspectionChecklist
-                  issues={sortedIssues}
-                  checked={checked}
-                  onToggle={toggle}
-                  recommendedIds={recommendedIds}
-                />
+                <div className="hidden text-right lg:block">
+                  <div className="font-condensed text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-text">Asking price</div>
+                  <div className="mt-1 font-mono text-[28px] font-bold">{usd(displayPrice)}</div>
+                </div>
               </div>
+            </header>
 
+            {saveError && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 lg:col-span-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-600" />
+                  <span role="alert" className="text-[13px] text-amber-800">
+                    Couldn't generate a shareable link — your report is still valid, refresh to retry.
+                  </span>
+                </div>
+                {onRetrySave && (
+                  <Button
+                    onClick={onRetrySave}
+                    variant="outline"
+                    size="sm"
+                    className="h-11 border-amber-300 font-condensed text-xs font-semibold uppercase tracking-wider text-amber-800 hover:bg-amber-100"
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Car with numbered pins */}
+            <FindingsCar body={bodyStyleFor({ model: vehicle.model })} pins={pins} />
+
+            {/* Verdict. On desktop it also carries the ruler and the copy button. */}
+            <RecommendationCard recommendation={safeRecommendation}>
+              <div className="hidden lg:block">
+                <div className="mt-5">
+                  <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+                    Your offer vs. the market
+                  </h3>
+                  <PriceRuler {...rulerProps} />
+                </div>
+                <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
+              </div>
+            </RecommendationCard>
+
+            {/* Mobile offer card */}
+            <section aria-label="Suggested offer" className="rounded-card border-2 border-primary bg-white p-[18px] lg:hidden">
+              {offerHeader}
+              <div className="mt-5">
+                <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+                  Your offer vs. the market
+                </h3>
+                <PriceRuler {...rulerProps} />
+              </div>
+              <div className="mt-3.5 border-t border-card-border pt-3.5">
+                <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
+              </div>
+              <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
+            </section>
+
+            {/* Desktop tiles */}
+            <div className="hidden lg:col-span-2 lg:grid lg:grid-cols-3 lg:gap-4">
+              <RepairCostTracker variant="tile" partsTotal={partsTotal} repairTotal={repairTotal} label={budgetLabel} />
+              <div className="flex items-center gap-3.5 rounded-card border border-card-border bg-white px-[22px] py-5">
+                <span className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-primary-tint-border bg-primary-tint text-primary-ink">
+                  <Flag aria-hidden="true" className="h-6 w-6" />
+                </span>
+                <div>
+                  <div className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-muted-text">Seller red flags</div>
+                  <div className="mt-1 font-mono text-[30px] font-bold leading-none">
+                    {hasRedFlags ? sellerRedFlags!.length : 0}{" "}
+                    <span className="font-sans text-[15px] font-medium text-text-2">{hasRedFlags ? "detected" : "none detected"}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3.5 rounded-card border border-card-border bg-white px-[22px] py-5">
+                <span className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border border-success-border bg-success-bg text-success">
+                  <ShieldCheck aria-hidden="true" className="h-6 w-6" />
+                </span>
+                <div>
+                  <div className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-muted-text">NHTSA recalls</div>
+                  <div className="mt-1 font-mono text-[30px] font-bold leading-none">
+                    {recallStat.n}{" "}
+                    <span className="font-sans text-[15px] font-medium text-text-2">{recallStat.text}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* ── Sidebar ── */}
-            <aside className="space-y-6 lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
+            {/* Left column: red flags and findings */}
+            <div className="flex min-w-0 flex-col gap-4">
+              {hasRedFlags && (
+                <section
+                  aria-label="Seller red flags"
+                  className="rounded-card border border-primary-tint-border bg-primary-tint p-[18px] lg:px-6 lg:py-[22px]"
+                >
+                  <h2 className="font-condensed text-[15px] font-bold uppercase tracking-[0.12em] text-primary-ink">
+                    {sellerRedFlags!.length} seller red {sellerRedFlags!.length === 1 ? "flag" : "flags"}
+                  </h2>
+                  <ul className="mt-3 flex flex-col gap-3">
+                    {sellerRedFlags!.map((flag, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary-tint-border bg-white text-primary-ink">
+                          <Flag aria-hidden="true" className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="pt-[3px] text-[15px] leading-[1.45] text-[#2b2b2a]">{flag}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <FindingsList findings={sortedIssues} checked={checked} onToggle={toggle} />
+            </div>
 
-              {/* Repair Budget */}
-              <RepairCostTracker
-                count={checkedIssues.length}
-                partsTotal={partsTotal}
-                repairTotal={repairTotal}
-                suggestedOffer={suggestedOffer}
-              />
-
-              {/* Negotiation Script */}
-              <div id="section-negotiation">
+            {/* Right column on desktop: offer, message, recalls. On mobile: message and recalls. */}
+            <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+              <section aria-label="Suggested offer" className="hidden rounded-card border-2 border-primary bg-white p-[22px] lg:block">
+                {offerHeader}
+                <div className="mt-3.5">
+                  <NegotiationScript
+                    variant="panel"
+                    vehicle={vehicle}
+                    askingPrice={displayPrice}
+                    checkedIssues={checkedIssues}
+                    repairTotal={repairTotal}
+                    suggestedOffer={suggestedOffer}
+                  />
+                </div>
+              </section>
+              <div className="mt-2 lg:hidden">
                 <NegotiationScript
                   vehicle={vehicle}
                   askingPrice={displayPrice}
@@ -760,32 +740,14 @@ export function ReportView({
                   suggestedOffer={suggestedOffer}
                 />
               </div>
-
-              <p className="px-1 text-[11px] text-zinc-500">
-                Tip: tick checklist items to update the repair budget and negotiation offer.
-              </p>
-
+              <RecallSection recalls={recalls} badge={recallBadge} className="" />
             </aside>
-          </div>
 
-          {/* Recalls — full width */}
-          <div id="section-recalls" className="mt-6">
-            <div className="mb-3 flex items-center gap-2">
-              <recallBadge.Icon className={`h-3.5 w-3.5 ${recallBadge.color}`} />
-              <span className={`font-condensed text-[10px] font-semibold uppercase tracking-wider ${recallBadge.color}`}>
-                {recallBadge.label}
-              </span>
-            </div>
-            {recalls.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-zinc-500">
-                No recall records found for this vehicle.
-              </div>
-            ) : (
-              <RecallSection recalls={recalls} />
-            )}
+            <p className="border-t border-card-border pt-4 text-[13px] leading-[1.5] text-muted-text lg:col-span-2 lg:mt-4 lg:text-sm">
+              Estimates are for informational purposes. Always have a licensed mechanic inspect the car before you buy.
+            </p>
           </div>
-
-        </section>
+        </div>
       </div>
 
       {/* Share modal */}
