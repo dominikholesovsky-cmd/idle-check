@@ -48,6 +48,35 @@
   --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Design refresh tokens (see :root) */
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-text-2: var(--text-2);
+  --color-muted-text: var(--muted-text);
+  --color-card-border: var(--card-border);
+  --color-input-border: var(--input-border);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+  --color-chip: var(--chip);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-tint: var(--primary-tint);
+  --color-primary-tint-border: var(--primary-tint-border);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-fg: var(--sev-high-fg);
+  --color-sev-med: var(--sev-med);
+  --color-sev-med-fg: var(--sev-med-fg);
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-fg: var(--sev-low-fg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-market-band: var(--market-band);
+  --radius-card: 16px;
+  --radius-card-sm: 14px;
+  --radius-hero: 20px;
+  --radius-field: 10px;
 }
 
 :root {
@@ -86,6 +115,31 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Design refresh tokens. --primary above already matches #b32228. */
+  --page: #f5f4f0;
+  --ink: #121212;
+  --text-2: #3f3f3d;
+  --muted-text: #646360;
+  --card-border: #e5e4e2;
+  --input-border: #d9d7d1;
+  --panel: #ece9e1;
+  --panel-border: #e0ddd4;
+  --chip: #f2f2ef;
+  --primary-hover: #991b1b;
+  --primary-ink: #8f1b20;
+  --primary-tint: #fdf2f1;
+  --primary-tint-border: #f1d2d0;
+  --sev-high: #b32228;
+  --sev-high-fg: #ffffff;
+  --sev-med: #f59e0b;
+  --sev-med-fg: #121212;
+  --sev-low: #e5e4e2;
+  --sev-low-fg: #3f3f3d;
+  --success: #1d6b43;
+  --success-bg: #e9f4ee;
+  --success-border: #cfe5d8;
+  --market-band: #8cc7a6;
 }
 
 .dark {
