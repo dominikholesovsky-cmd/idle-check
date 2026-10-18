@@ -14,6 +14,7 @@ import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
 import { saveReport } from "@/lib/api/saveReport";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import { loadReportBySession } from "@/lib/api/loadReportBySession";
+import { toPublicReportJson } from "@/lib/ghost/publicReport";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -50,6 +51,11 @@ export interface AnalysisState {
   listingText?: string;
   engineType?: string;
   shareId?: string;
+  /** Stays on this device (localStorage). Never part of report_json. */
+  email?: string;
+  marketingOptIn?: boolean;
+  /** Set only in the public report JSON. */
+  savedToEmail?: boolean;
 }
 
 const STORAGE_KEY = "idle-check-history";
@@ -253,7 +259,8 @@ function Index() {
         marketValueHigh: aiResult.marketValueHigh,
         recommendation: newRecommendation,
       });
-      await attemptSaveAndEmail(sessionId, reportId, upgraded as unknown as Record<string, unknown>);
+      // The saved JSON is publicly readable, so it never carries the email.
+      await attemptSaveAndEmail(sessionId, reportId, toPublicReportJson(upgraded) as unknown as Record<string, unknown>);
     } else {
       console.log("0 issues from Claude, keeping procedural");
       setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
@@ -461,6 +468,8 @@ function Index() {
         unlocked: false, recallSource,
         listingText: data.manualText,
         engineType: data.engineType,
+        email: data.email,
+        marketingOptIn: data.marketingOptIn,
       };
 
     } catch (err) {
@@ -476,6 +485,8 @@ function Index() {
         unlocked: false, recallSource: "procedural",
         listingText: data.manualText,
         engineType: data.engineType,
+        email: data.email,
+        marketingOptIn: data.marketingOptIn,
       };
     }
   };
