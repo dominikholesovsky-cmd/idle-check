@@ -4,11 +4,8 @@ import { HelpTooltip } from "./HelpTooltip";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { round100 } from "@/lib/ghost/report";
 import type { Issue, Vehicle } from "@/lib/ghost/types";
-
-function roundHundred(n: number): number {
-  return Math.round(n / 100) * 100;
-}
 
 export function NegotiationScript({
   vehicle,
@@ -30,9 +27,10 @@ export function NegotiationScript({
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  const repairRounded = roundHundred(repairTotal);
-  const offerRounded = roundHundred(suggestedOffer);
-  const askingRounded = roundHundred(askingPrice);
+  // repairTotal and suggestedOffer are already rounded by ReportView
+  const repairRounded = repairTotal;
+  const offerRounded = suggestedOffer;
+  const askingRounded = round100(askingPrice);
 
   const yearStr = vehicle.year ? `${vehicle.year} ` : "";
   const modelStr = `${yearStr}${vehicle.make} ${vehicle.model}`.trim();

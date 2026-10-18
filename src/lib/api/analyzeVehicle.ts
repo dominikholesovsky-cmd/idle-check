@@ -44,6 +44,16 @@ function extractJson(text: string): string {
   return cleaned.slice(start, end + 1);
 }
 
+// Optional USD market range from the model. Anything that is not a sane, ordered pair is dropped.
+function parseMarketRange(parsed: any): { marketValueLow?: number; marketValueHigh?: number } {
+  const low = Number(parsed?.marketValueLow);
+  const high = Number(parsed?.marketValueHigh);
+  if (Number.isFinite(low) && Number.isFinite(high) && low > 0 && high >= low) {
+    return { marketValueLow: Math.round(low), marketValueHigh: Math.round(high) };
+  }
+  return {};
+}
+
 async function callClaudeWithRetry(fn: () => Promise<any>, maxAttempts = 3): Promise<any> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -101,7 +111,13 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.log("analyzeVehicle: no API key");
-      return { issues: [] as Issue[], sellerRedFlags: [] as string[], marketValueNote: "" };
+      return {
+        issues: [] as Issue[],
+        sellerRedFlags: [] as string[],
+        marketValueNote: "",
+        marketValueLow: undefined as number | undefined,
+        marketValueHigh: undefined as number | undefined,
+      };
     }
 
     const client = new Anthropic({
@@ -136,8 +152,12 @@ Return this exact JSON:
     "parts": [{"name": "part name", "partNumber": "OEM# or null", "priceUsd": number, "source": "RockAuto"|"OEM Dealer"|"Estimated", "url": null}]
   }],
   "sellerRedFlags": ["red flags from listing or empty array"],
-  "marketValueNote": "one sentence"
+  "marketValueNote": "one sentence",
+  "marketValueLow": number|null,
+  "marketValueHigh": number|null
 }
+
+marketValueLow/marketValueHigh: typical fair USD market range for this car at this mileage, or null if unsure.
 
 Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120). HIGH=$500+. MED=$150-500. LOW=under $150.${hasListing ? " Prioritize issues hinted in listing." : ""}`;
 
@@ -188,6 +208,8 @@ Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120).
         issues,
         sellerRedFlags: (parsed.sellerRedFlags ?? []) as string[],
         marketValueNote: String(parsed.marketValueNote ?? ""),
+        marketValueLow: parseMarketRange(parsed).marketValueLow,
+        marketValueHigh: parseMarketRange(parsed).marketValueHigh,
       };
     } catch (err) {
       console.error("Claude API error:", err);
@@ -195,6 +217,8 @@ Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120).
         issues: [] as Issue[],
         sellerRedFlags: [] as string[],
         marketValueNote: "",
+        marketValueLow: undefined as number | undefined,
+        marketValueHigh: undefined as number | undefined,
       };
     }
   });

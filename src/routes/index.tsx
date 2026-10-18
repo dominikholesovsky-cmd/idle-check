@@ -44,6 +44,8 @@ export interface AnalysisState {
   unlocked: boolean;
   sellerRedFlags?: string[];
   marketValueNote?: string;
+  marketValueLow?: number;
+  marketValueHigh?: number;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
   listingText?: string;
   engineType?: string;
@@ -120,6 +122,8 @@ const DEMO_ANALYSIS: AnalysisState = {
     "Listed for 3 weeks with multiple price drops — suggests known issues",
   ],
   marketValueNote: "2018 BMW 330i with 94k miles typically sells for $16,200–$17,800 in this condition. Asking price of $18,500 is above market — use repair findings to justify offer of $15,500–$16,000.",
+  marketValueLow: 16200,
+  marketValueHigh: 17800,
   recallSource: "nhtsa",
   recalls: [
     { id: "demo-recall-1", component: "ENGINE AND ENGINE COOLING", description: "The fuel injector may crack causing fuel leakage which increases the risk of fire.", date: "2019-03-15", status: "Remedied" },
@@ -215,7 +219,13 @@ function Index() {
     entry: AnalysisState,
     sessionId: string,
     reportId: string,
-    aiResult: { issues: Issue[]; sellerRedFlags?: string[]; marketValueNote?: string },
+    aiResult: {
+      issues: Issue[];
+      sellerRedFlags?: string[];
+      marketValueNote?: string;
+      marketValueLow?: number;
+      marketValueHigh?: number;
+    },
   ) => {
     if (aiResult.issues.length > 0) {
       const newRecommendation = generateRecommendation(
@@ -229,6 +239,8 @@ function Index() {
         issues: aiResult.issues,
         sellerRedFlags: aiResult.sellerRedFlags,
         marketValueNote: aiResult.marketValueNote,
+        marketValueLow: aiResult.marketValueLow,
+        marketValueHigh: aiResult.marketValueHigh,
         recommendation: newRecommendation,
       };
       setAnalysis(upgraded);
@@ -237,6 +249,8 @@ function Index() {
         issues: aiResult.issues,
         sellerRedFlags: aiResult.sellerRedFlags,
         marketValueNote: aiResult.marketValueNote,
+        marketValueLow: aiResult.marketValueLow,
+        marketValueHigh: aiResult.marketValueHigh,
         recommendation: newRecommendation,
       });
       await attemptSaveAndEmail(sessionId, reportId, upgraded as unknown as Record<string, unknown>);
@@ -605,6 +619,8 @@ function Index() {
             recommendation={analysis.recommendation}
             sellerRedFlags={analysis.sellerRedFlags}
             marketValueNote={analysis.marketValueNote}
+            marketValueLow={analysis.marketValueLow}
+            marketValueHigh={analysis.marketValueHigh}
             recallSource={analysis.recallSource}
             onNewReport={goHome}
             shareId={shareId ?? undefined}

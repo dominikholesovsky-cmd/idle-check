@@ -10,12 +10,18 @@ import { NegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard, MaintenanceRoadmap } from "./RecommendationCard";
 import { generateRecommendation } from "@/lib/ghost/procedural";
+import { computeOffer, sortFindings } from "@/lib/ghost/report";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
+
+// HIGH-severity findings start ticked, so the budget and offer are not $0 on first view.
+function defaultChecked(issues: Issue[]): Set<string> {
+  return new Set(issues.filter((i) => i.severity === "HIGH").map((i) => i.id));
+}
 
 export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
   recommendation, onNewReport,
-  sellerRedFlags, marketValueNote, recallSource,
+  sellerRedFlags, marketValueNote, marketValueLow, marketValueHigh, recallSource,
   shareId, isSharedView, isDemo, saveError, onRetrySave,
 }: {
   vehicle: Vehicle;
@@ -27,6 +33,8 @@ export function ReportView({
   onNewReport: () => void;
   sellerRedFlags?: string[];
   marketValueNote?: string;
+  marketValueLow?: number;
+  marketValueHigh?: number;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
   shareId?: string;
   isSharedView?: boolean;
@@ -34,7 +42,7 @@ export function ReportView({
   saveError?: boolean;
   onRetrySave?: () => void;
 }) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [checked, setChecked] = useState<Set<string>>(() => defaultChecked(issues));
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState<string>("verdict");
   const [showShareModal, setShowShareModal] = useState(false);
@@ -84,18 +92,22 @@ export function ReportView({
     return next;
   });
 
-  const checkedIssues = useMemo(() => {
-    return Array.isArray(issues) ? issues.filter((i) => checked.has(i.id)) : [];
-  }, [issues, checked]);
+  // Findings in display order (HIGH, MED, LOW). The position is the finding number.
+  const sortedIssues = useMemo(() => sortFindings(Array.isArray(issues) ? issues : []), [issues]);
 
-  const partsTotal = checkedIssues.reduce(
-    (s, i) => s + Math.round(((i.partsCostMin || 0) + (i.partsCostMax || 0)) / 2), 0
+  // Re-tick the HIGH findings whenever the set of findings changes
+  const issuesKey = sortedIssues.map((i) => i.id).join("|");
+  useEffect(() => {
+    setChecked(defaultChecked(sortedIssues));
+  }, [issuesKey]);
+
+  const checkedIssues = useMemo(
+    () => sortedIssues.filter((i) => checked.has(i.id)),
+    [sortedIssues, checked],
   );
-  const labourTotal = checkedIssues.reduce(
-    (s, i) => s + Math.round((i.labourHours || 0) * 120), 0
-  );
-  const grandTotal = partsTotal + labourTotal;
-  const suggestedOffer = Math.max(0, Math.round((askingPrice || 0) - grandTotal * 0.65));
+
+  // One offer calculation for the whole report
+  const { partsTotal, repairTotal, suggestedOffer } = computeOffer(checkedIssues, askingPrice || 0);
 
   const recommendedIds = useMemo(() => {
     return Array.isArray(issues)
@@ -235,11 +247,12 @@ export function ReportView({
     y += 4;
 
     // Verdict badge
-    const verdictLabel = safeRecommendation.verdict?.toUpperCase() || "—";
+    const verdictKey = safeRecommendation.verdict?.toUpperCase() || "—";
+    const verdictLabel = verdictKey === "WALKAWAY" ? "WALK AWAY" : verdictKey;
     const badgeColors: Record<string, [number,number,number]> = {
-      "BUY": [22,163,74], "NEGOTIATE": [234,88,12], "SKIP": [185,28,28], "CAUTION": [161,98,7],
+      "BUY": [29,107,67], "NEGOTIATE": [234,88,12], "WALKAWAY": [179,34,40],
     };
-    const badgeColor = badgeColors[verdictLabel] ?? [107,114,128];
+    const badgeColor = badgeColors[verdictKey] ?? [107,114,128];
     doc.setFillColor(...badgeColor);
     doc.roundedRect(MARGIN, y, 72, 18, 3, 3, "F");
     doc.setTextColor(255,255,255);
@@ -430,7 +443,7 @@ export function ReportView({
     // ── NEGOTIATION SCRIPT ────────────────────────────────────────
     y = ensureSpace(100, y);
     y = sectionHeading("NEGOTIATION SCRIPT", y);
-    const offerRounded = Math.round(suggestedOffer / 100) * 100;
+    const offerRounded = suggestedOffer;
     const yearStr2 = vehicle.year ? `${vehicle.year} ` : "";
     const modelStr = `${yearStr2}${vehicle.make} ${vehicle.model}`.trim();
     // Only include issues that have a real repair cost (costMin > 0 OR costMax > 0)
@@ -717,7 +730,7 @@ export function ReportView({
                   )}
                 </div>
                 <InspectionChecklist
-                  issues={issues}
+                  issues={sortedIssues}
                   checked={checked}
                   onToggle={toggle}
                   recommendedIds={recommendedIds}
@@ -731,9 +744,10 @@ export function ReportView({
 
               {/* Repair Budget */}
               <RepairCostTracker
-                issues={issues}
-                checked={checked}
-                askingPrice={displayPrice}
+                count={checkedIssues.length}
+                partsTotal={partsTotal}
+                repairTotal={repairTotal}
+                suggestedOffer={suggestedOffer}
               />
 
               {/* Negotiation Script */}
@@ -742,7 +756,7 @@ export function ReportView({
                   vehicle={vehicle}
                   askingPrice={displayPrice}
                   checkedIssues={checkedIssues}
-                  repairTotal={grandTotal}
+                  repairTotal={repairTotal}
                   suggestedOffer={suggestedOffer}
                 />
               </div>

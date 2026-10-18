@@ -62,6 +62,8 @@ function SharedReport() {
           recommendation={report.recommendation}
           sellerRedFlags={report.sellerRedFlags}
           marketValueNote={report.marketValueNote}
+          marketValueLow={report.marketValueLow}
+          marketValueHigh={report.marketValueHigh}
           recallSource={report.recallSource}
           onNewReport={() => { window.location.href = "/"; }}
           shareId={id}

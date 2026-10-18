@@ -1,34 +1,22 @@
-import type { Issue } from "@/lib/ghost/types";
+import { LABOUR_RATE, round100 } from "@/lib/ghost/report";
 
-const LABOUR_RATE = 120;
-
-function roundHundred(n: number): number {
-  return Math.round(n / 100) * 100;
-}
-
+// Presentational only: the totals and the offer come from ReportView (one calculation).
 export function RepairCostTracker({
-  issues,
-  checked,
-  askingPrice,
+  count,
+  partsTotal,
+  repairTotal,
+  suggestedOffer,
   embedded = false,
 }: {
-  issues: Issue[];
-  checked: Set<string>;
-  askingPrice: number;
+  count: number;
+  partsTotal: number;
+  repairTotal: number;
+  suggestedOffer: number;
   embedded?: boolean;
 }) {
-  const checkedIssues = issues.filter((i) => checked.has(i.id));
-  const partsTotal = checkedIssues.reduce(
-    (s, i) => s + Math.round((i.partsCostMin + i.partsCostMax) / 2), 0,
-  );
-  const labourTotal = checkedIssues.reduce(
-    (s, i) => s + Math.round(i.labourHours * LABOUR_RATE), 0,
-  );
-  const grandTotal = roundHundred(partsTotal + labourTotal);
-  const partsRounded = roundHundred(partsTotal);
-  const labourRounded = roundHundred(labourTotal);
-  const suggestedOffer = Math.max(0, roundHundred(askingPrice - grandTotal * 0.65));
-  const count = checkedIssues.length;
+  const partsRounded = Math.min(repairTotal, round100(partsTotal));
+  const labourRounded = repairTotal - partsRounded; // parts + labour always add up to the total
+  const grandTotal = repairTotal;
 
   return (
     <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-white p-5"}>
