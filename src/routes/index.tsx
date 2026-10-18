@@ -570,6 +570,8 @@ function Index() {
             issues={analysis.issues}
             onUnlock={handleUnlock}
             paymentError={analyzeError}
+            askingPrice={analysis.askingPrice}
+            marketplace={analysis.marketplace}
           />
         )}
 
