@@ -19,7 +19,7 @@ Existing contract stays: props `onDone`, `apiReady`.
 Existing contract stays: `onDone`, `claudePromise`, `hasError`, `onRetry`, `retryCount`. Keep the existing error card and retry behavior and restyle them in the new look (same copy, same support email).
 - Pill "Payment confirmed" (green). Steps: "Verifying payment" (already done on mount, the payment is verified before this screen shows), "Reading the listing text", "Finding model-specific issues" (AI), "Pricing parts and labor", "Writing your negotiation script", "Saving your report link".
 - The first two steps complete on timers. The AI step stays active until `claudePromise` settles; the last three then complete quickly (about 300 ms each). Do not show the last step complete before `claudePromise` has resolved. If it rejects or `hasError` is true, show the error card.
-- Note under the list, exactly as in the mock: "Keep this tab open. We'll also email a link to the report to the address you paid with."
+- New optional prop `email?: string`, passed from `index.tsx` (from the stored `AnalysisState.email`). Note under the list: with an email, "Keep this tab open. We'll also email a link to the report to {email}. It stays saved under that address."; without one, "Keep this tab open. We'll also email a link to the report to the address you paid with." This screen is only seen by the person who just paid, so showing the address here is fine. Never show it on the report page.
 - Keep the existing redirect to `/report/:id` after `onDone`.
 
 ## Acceptance

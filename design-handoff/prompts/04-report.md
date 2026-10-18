@@ -1,32 +1,43 @@
 # Phase 4: report
 
-Reference: `design-reference/report-mobile.html`, `report-desktop.html`. Pin positions: `assets/pin-slots.json`.
-Code: `ReportView.tsx`, `RecommendationCard.tsx`, `InspectionChecklist.tsx`, `RepairCostTracker.tsx`, `NegotiationScript.tsx`, `RecallSection.tsx`, and one optional addition in `src/lib/api/analyzeVehicle.ts`.
-Do this in two sub-steps and commit between them: 4A logic, then 4B UI.
+Reference: `design-reference/report-mobile.html`, `report-desktop.html`. Pin positions and crop: `assets/pin-slots.json`. The hover behavior works live in the HTML previews (CSS only): open `report-desktop.html` and hover the pins and the list rows.
+Code: `ReportView.tsx`, `RecommendationCard.tsx`, `InspectionChecklist.tsx`, `RepairCostTracker.tsx`, `NegotiationScript.tsx`, `RecallSection.tsx`, and one optional addition in `src/lib/api/analyzeVehicle.ts`. Read the data and privacy rules in the brief first.
+Do it in two sub-steps and commit between them: 4A logic, then 4B UI.
 
 ## 4A: logic (no visual change yet)
-1. One offer calculation. Today the tracker and the message compute the offer separately with different rounding. Compute once in `ReportView`: `repairTotal = round100(partsTotal + labourTotal)`, `suggestedOffer = max(0, round100(askingPrice - 0.65 * repairTotal))`. Pass both down; remove the duplicates in `RepairCostTracker` and `NegotiationScript`.
-2. Default selection: tick all HIGH-severity issues on mount and whenever `issues` changes.
-3. Order: sort issues by severity (HIGH, MED, LOW), then original order. The position after sorting is the finding number used by the list and the pins.
+1. One offer calculation. Today the tracker and the message compute the offer separately with different rounding. Compute once in `ReportView`: `repairTotal = round100(partsTotal + labourTotal)`, `suggestedOffer = max(0, round100(askingPrice - 0.65 * repairTotal))`. Pass both down; remove the duplicates.
+2. Default selection: tick all HIGH-severity issues on mount and when `issues` changes.
+3. Order: sort issues by severity (HIGH, MED, LOW), then original order. The position after sorting is the finding number shared by the list and the pins.
 4. Urgency labels: Immediate = "Fix before buying", Soon = "Within 3 months", Monitor = "Keep an eye on".
-5. Optional market range: extend the `analyzeVehicle` JSON with optional numbers `marketValueLow` and `marketValueHigh` (USD). Add them to the prompt as one line, to the parsed result, to `AnalysisState`, to the saved report JSON, and to the props of `ReportView`. Everything must tolerate missing values (old saved reports, the demo data, failed parsing). Keep `marketValueNote`. Update `DEMO_ANALYSIS` with 16200 and 17800.
-6. Body style: `bodyStyleFor(vehicle)` returns `'roadster'` for models matching `/miata|mx-?5|s2000|z[34]\b|boxster|slk|solstice|mr-?2|4c|r8/i`, otherwise `'sedan'`.
-7. Pins: for each finding, take the next free slot from `pin-slots.json` for the finding's category zone and body style. No free slot means no pin (the finding still appears in the list). On mobile only slots inside the crop `236 64 252 150` are shown.
+5. Optional market range: extend the `analyzeVehicle` JSON with optional numbers `marketValueLow` and `marketValueHigh` (USD): one line in the prompt, the parsed result, `AnalysisState`, the saved report JSON, and the props of `ReportView`. Tolerate missing values everywhere (old saved reports, demo data, failed parsing). Keep `marketValueNote`. Update `DEMO_ANALYSIS` with 16200 and 17800, and fix its brake fluid issue category to "Chassis & Suspension" (it is mislabeled as Engine & Drivetrain).
+6. `bodyStyleFor(vehicle)` returns `'roadster'` for models matching `/miata|mx-?5|s2000|z[34]\b|boxster|slk|solstice|mr-?2|4c|r8/i`, otherwise `'sedan'`.
+7. Pins: for each sorted finding, take the next free slot of its category zone and body style from `pin-slots.json` (order as listed). No free slot means no pin. The car is always the cropped view (`viewBox` from the file) on every screen size.
+8. Shared interaction state in `ReportView`: `activeFinding: number | null` (hover or focus or tap) used by the car, the list rows and the mobile caption.
 
 ## 4B: UI (follow the mocks)
-Order on mobile: title block, car card with numbered pins and a legend, verdict card, offer card (offer, price ruler, repair budget with parts/labor bar, copy button), red flags, findings list, message bubble, recalls, disclaimer. Desktop: title row, two-column hero (car card left, verdict and ruler right), three tiles (repair budget with bar, red flag count, recall count), then two columns: red flags and findings on the left, a sticky right column with offer, message bubble and recalls.
-- Verdict pill from `recommendation.verdict`: buy (green `#1d6b43`, white text), negotiate (amber, dark text), walkaway (primary red, white text, label "WALK AWAY"). Headline and summary come from `recommendation`. On mobile clamp the summary to 3 lines with a "Read full verdict" link that expands it.
-- Price ruler: markers for your offer and the asking price, plus the market band when both market numbers exist. Domain: lowest of (offer, market low) minus 5% of asking, rounded down to $500, up to highest of (asking, market high) plus 5% of asking, rounded up to $500. Show the market label only when the band exists. Show `marketValueNote` as a small caption below when present.
-- Budget bar: parts versus labor of the ticked findings, using the existing sums and $120/h.
-- Findings list: flat list (the three category accordions go away). Row: checkbox, numbered badge in severity colors (same colors and numbers as the pins), severity pill, urgency label, title, parts range, labor hours. The first HIGH finding starts expanded: explanation plus its parts (name, `#partNumber · source`, price) from `issue.parts`. Other rows expand on tap. Rows without parts show only the explanation.
-- Red flags card: hidden when there are none. Recalls card: reuse the existing `RecallSection` data and the live-data badge; keep the empty-state text.
-- Message bubble: keep the existing message generator; only change the presentation (primary-colored outgoing bubble, copy button, toast as today).
-- Keep: PDF export, share modal and share link, `saveError` banner with retry, the Demo badge, `isSharedView`, and compatibility with `src/routes/report.$id.tsx` (it must still render with its current props). Keep the thin fixed top scroll-progress bar. Remove the left section navigation (see the brief, decisions to confirm).
-- Fix the PDF verdict badge color mapping described in the brief.
-- Share, PDF and New report actions: Navbar keeps New report; place Share and PDF in the title block (icon buttons on mobile, labeled buttons on desktop).
+Desktop order: title row (name, meta, "Saved to your email" chip only when `savedToEmail` is true, asking price), hero row, then two columns.
+- Hero row: left white verdict card (verdict pill, headline, summary, price ruler; no copy button here). Right column: compact car card (title "Findings on the car", hint "Hover a pin", the cropped car with numbered pins, legend), then the red flags card (hidden when none).
+- Main row: left the findings list; right a sticky column (`top: 24px`): offer card (suggested offer, asking line, repair budget with parts/labor bar, "Message to the seller" bubble, copy button), then the recalls card.
+- The old three-tile row and the left section navigation are gone. Keep the thin fixed top scroll-progress bar.
+Mobile order: title block (with the same chip), car card with a caption bar, verdict card (summary clamped to 3 lines, "Read full verdict" expands), offer card (offer, price ruler, repair budget, copy button), red flags, findings, message bubble, recalls, disclaimer.
+
+Pins, tooltip and list link
+- Pin: 26 px circle, severity colors, 2 px white border, a real `<button>` with `aria-label="Finding N: title"`, positioned in percent of the crop.
+- Desktop: hover or keyboard focus opens a tooltip above the pin (about 236 px wide: severity pill, title, "$min–max parts · N h labor", "Click to jump to the finding"). Pins past 65% of the width align the tooltip to the right edge. Click or Enter scrolls to the finding row, expands it and focuses it. Hovering a row highlights its pin (3 px ink ring) and hovering a pin highlights its row (`#fff8e8`), through `activeFinding`.
+- Mobile: tapping a pin sets `activeFinding` and shows its description in the caption bar under the car (badge, title, cost, "Details" link that scrolls and expands the row). The first finding is selected by default.
+- Keep pins from overlapping: slot positions already guarantee it at 330 px card width.
+
+Other requirements
+- Verdict pill from `recommendation.verdict`: buy (green `#1d6b43`, white text), negotiate (amber, dark text), walkaway (primary red, white text, label "WALK AWAY"). Headline and summary from `recommendation`.
+- Price ruler: markers for your offer and the asking price, plus the market band when both market numbers exist. Domain: lowest of (offer, market low) minus 5% of asking, rounded down to $500, up to the highest of (asking, market high) plus 5% of asking, rounded up to $500. Show the market label only when the band exists; show `marketValueNote` as a small caption when present.
+- Budget bar: parts versus labor of the ticked findings (existing sums, $120/h).
+- Findings list: flat (the three category accordions go away). Row: checkbox, numbered badge in the severity color, severity pill, urgency label, title, parts range, labor hours. The first HIGH finding starts expanded (explanation plus its parts: name, `#partNumber · source`, price). Other rows expand on tap. Rows without parts show only the explanation.
+- Recalls card reuses the existing `RecallSection` data, live-data badge and empty state. Message bubble keeps the existing generator, only the presentation changes (primary-colored outgoing bubble, copy button, toast as today).
+- Keep: PDF export (logic untouched, see the brief for the one color-mapping fix), share modal and link, `saveError` banner with retry, the Demo badge, `isSharedView`, compatibility with `src/routes/report.$id.tsx`. Share and PDF go in the title block (icon buttons on mobile, labeled buttons on desktop); Navbar keeps New report.
+- The report must never show the owner's email.
 
 ## Acceptance
-- Build passes. Test with: demo mode (`/?demo=true`), a real flow through the admin bypass, and an old saved report opened through `/report/:id` (no market numbers, must not break).
-- Ticking and unticking findings updates the budget bar, the offer, the ruler and the message together, and they always agree.
-- Pins and list numbers match. No pin overlaps another at 390 px.
-- Report back: every deviation, plus the two decisions you defaulted.
+- Build passes. Test with demo mode, a real flow through the admin bypass, and an old saved report opened through `/report/:id` (no market numbers, no `savedToEmail`; must not break).
+- Ticking and unticking findings updates the budget bar, offer, ruler and message together and they always agree.
+- Pins and list numbers match; hover, focus and tap behave as described; no horizontal scroll at 360 px.
+- Report back: every deviation, and the two decisions you defaulted.
