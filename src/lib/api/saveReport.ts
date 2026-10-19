@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { serviceClient } from "./_supabaseAdmin";
+import { maskEmail } from "@/lib/ghost/email";
 
 const InputSchema = z.object({
   sessionId: z.string().optional(),
   reportJson: z.record(z.unknown()),
+  // Kept out of report_json on purpose (that table is publicly readable). Only used to link the owner.
+  email: z.string().trim().toLowerCase().email().max(254).optional(),
 });
 
 export const saveReport = createServerFn({ method: "POST" })
@@ -30,6 +34,29 @@ export const saveReport = createServerFn({ method: "POST" })
       .from("reports")
       .update({ report_json: { ...data.reportJson, shareId } })
       .eq("id", shareId);
+
+    // Link the report to its owner. Tolerant: a failure here must never lose the saved report.
+    if (data.email) {
+      try {
+        const db = serviceClient(); // fails closed without the service role key
+        const { error: leadError } = await db
+          .from("leads")
+          .upsert({ email: data.email, source: "report" }, { onConflict: "email", ignoreDuplicates: true });
+        if (leadError) throw leadError;
+        const { data: lead, error: findError } = await db
+          .from("leads")
+          .select("id")
+          .eq("email", data.email)
+          .single();
+        if (findError) throw findError;
+        const { error: ownerError } = await db
+          .from("report_owners")
+          .upsert({ report_id: shareId, lead_id: lead.id }, { onConflict: "report_id", ignoreDuplicates: true });
+        if (ownerError) throw ownerError;
+      } catch (err) {
+        console.error("Owner link failed for", maskEmail(data.email), err instanceof Error ? err.name : "error");
+      }
+    }
 
     return { id: shareId };
   });

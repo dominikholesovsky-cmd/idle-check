@@ -12,6 +12,9 @@ import { fetchRecalls } from "@/lib/api/fetchRecalls";
 import { createCheckoutSession } from "@/lib/api/createCheckoutSession";
 import { verifyStripeSession } from "@/lib/api/verifyStripeSession";
 import { saveReport } from "@/lib/api/saveReport";
+import { captureLead } from "@/lib/api/captureLead";
+import { maskEmail } from "@/lib/ghost/email";
+import { MARKETING_CONSENT_TEXT } from "@/lib/ghost/constants";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import { loadReportBySession } from "@/lib/api/loadReportBySession";
 import { toPublicReportJson } from "@/lib/ghost/publicReport";
@@ -173,7 +176,7 @@ function Index() {
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
-  const pendingSaveRef = useRef<{ sessionId: string; reportId: string; reportJson: Record<string, unknown> } | null>(null);
+  const pendingSaveRef = useRef<{ sessionId: string; reportId: string; reportJson: Record<string, unknown>; email?: string } | null>(null);
 
   // Bonus feature (email) must never block UX — 1 retry with a 3s delay, then just log.
   const attemptSendEmail = async (
@@ -197,10 +200,12 @@ function Index() {
     sessionId: string,
     reportId: string,
     reportJson: Record<string, unknown>,
+    email?: string,
   ) => {
-    pendingSaveRef.current = { sessionId, reportId, reportJson };
+    pendingSaveRef.current = { sessionId, reportId, reportJson, email };
     try {
-      const saved = await saveReport({ data: { sessionId, reportJson } });
+      // The email travels separately from reportJson, which is publicly readable once saved.
+      const saved = await saveReport({ data: { sessionId, reportJson, email } });
       pendingSaveRef.current = null;
       pendingShareIdRef.current = saved.id;
       setShareId(saved.id);
@@ -216,7 +221,7 @@ function Index() {
   const handleRetrySave = () => {
     const pending = pendingSaveRef.current;
     if (!pending) return;
-    void attemptSaveAndEmail(pending.sessionId, pending.reportId, pending.reportJson);
+    void attemptSaveAndEmail(pending.sessionId, pending.reportId, pending.reportJson, pending.email);
   };
 
   // Shared by the post-Stripe effect and handleRetry — builds the upgraded report
@@ -260,7 +265,7 @@ function Index() {
         recommendation: newRecommendation,
       });
       // The saved JSON is publicly readable, so it never carries the email.
-      await attemptSaveAndEmail(sessionId, reportId, toPublicReportJson(upgraded) as unknown as Record<string, unknown>);
+      await attemptSaveAndEmail(sessionId, reportId, toPublicReportJson(upgraded) as unknown as Record<string, unknown>, entry.email);
     } else {
       console.log("0 issues from Claude, keeping procedural");
       setAnalysis((prev) => prev ? { ...prev, unlocked: true } : prev);
@@ -430,6 +435,18 @@ function Index() {
     const reportId = generateReportId();
 
     const mileageNum = Number(data.mileage);
+    // Capture the lead in the background. It must never block or fail the analysis.
+    if (data.email) {
+      captureLead({
+        data: {
+          email: data.email,
+          marketingOptIn: data.marketingOptIn,
+          consentText: data.marketingOptIn ? MARKETING_CONSENT_TEXT : undefined,
+          source: "landing",
+        },
+      }).catch(() => console.error("Lead capture failed for", maskEmail(data.email)));
+    }
+
     setScanInfo({
       vehicleLabel: `${vehicle.year ?? ""} ${vehicle.make} ${vehicle.model}`.trim(),
       meta: `${mileageNum > 0 ? `${mileageNum.toLocaleString("en-US")} mi · ` : ""}Asking $${data.askingPrice.toLocaleString("en-US")}`,
@@ -501,6 +518,7 @@ function Index() {
           reportId: analysis.reportId,
           successUrl: window.location.origin,
           cancelUrl: window.location.origin,
+          customerEmail: analysis.email || undefined,
         },
       });
       if (result?.sessionUrl) {
