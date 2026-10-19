@@ -1,6 +1,6 @@
 import { CarIllustration } from "./CarIllustration";
 import { CAR_CROP, CAR_CROP_VIEWBOX, pinPercent, type BodyStyle, type Pin } from "@/lib/ghost/report";
-import type { CarImage } from "@/lib/ghost/carImages";
+import type { CarImageEntry } from "@/lib/ghost/carImages";
 import type { Issue, Severity } from "@/lib/ghost/types";
 
 function usd(n: number): string {
@@ -31,7 +31,7 @@ export function FindingsCar({
 }: {
   body: BodyStyle;
   /** A real line drawing for this model, shown whole. Without one the generic vector car is shown cropped. */
-  image?: CarImage | null;
+  image?: CarImageEntry | null;
   pins: Pin[];
   /** Findings in display order, so findings[n - 1] is finding n. */
   findings: Issue[];

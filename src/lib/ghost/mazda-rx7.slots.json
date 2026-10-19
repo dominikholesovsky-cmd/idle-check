@@ -1,29 +1,40 @@
 {
-  "_note": "Pin slots for this image. x,y are pixels in the 1366x409 coordinate system of mazda-rx7-full.png (divide by 1366 and 409 for percentages; the 1100px file has the same aspect ratio). Same assignment rule as the generic cars: sort findings (HIGH, MED, LOW), take the next free slot of the finding's category zone, no free slot means no pin.",
+  "_note": "One car image is used for every vehicle in the report, the step 2 confirmed-car card and the landing sample. Coordinates are pixels in the 1366x409 system of mazda-rx7-full.png (divide by 1366 and 409 for percentages; the 1100px file has the same aspect ratio).",
   "image": "mazda-rx7.png",
   "aspect": [
     1366,
     409
   ],
   "facing": "left",
-  "match": "/rx-?7/i on make + model, make must be Mazda",
-  "pinSizePx": {
-    "desktop": 30,
-    "mobile": 26
+  "mobileCrop": {
+    "x": 0,
+    "y": 0,
+    "width": 900,
+    "height": 409,
+    "imageWidthPercent": 151.8
   },
-  "slots": {
+  "pinSizePx": {
+    "desktop": 26,
+    "mobile": 24
+  },
+  "tooltipAlign": "left edge of tooltip at the pin when pin x < 30% of the full image width, otherwise centered",
+  "zones": {
     "Engine & Drivetrain": [
       [
-        310,
-        163
+        200,
+        192
       ],
       [
-        452,
+        305,
+        170
+      ],
+      [
+        410,
         168
       ],
       [
-        190,
-        190
+        515,
+        158
       ]
     ],
     "Body & Electrical": [
@@ -33,48 +44,78 @@
       ],
       [
         760,
-        260
+        262
       ],
       [
-        1170,
-        200
+        840,
+        140
       ]
     ],
     "Chassis & Suspension": [
       [
         282,
         297
+      ]
+    ],
+    "overflow": [
+      [
+        500,
+        330
       ],
       [
-        1039,
-        297
+        880,
+        338
       ]
     ]
   },
-  "sampleFindings": [
-    {
-      "n": 1,
-      "severity": "HIGH",
-      "title": "Apex Seal Compression Test",
-      "chip": "Apex seals",
-      "cost": "$170–250 parts · 2 h labor",
-      "why": "Ask for a compression test printout. Each rotor should read above 8.5 bar / 120 psi."
+  "assignment": "Process findings in display order (sorted HIGH, MED, LOW; the finding number is the position). For each finding take the next free slot of its category zone (unknown categories count as Body & Electrical). If that zone is full, take the next free slot from the first zone that has one, in the order Engine & Drivetrain, Body & Electrical, Chassis & Suspension, overflow. If nothing is free, no pin. Every slot has x <= 900, so the same positions are used on desktop and on the mobile crop.",
+  "landingSample": {
+    "note": "The landing sample card has its own fixed pins and label chips, independent of the zones.",
+    "pins": [
+      {
+        "n": 1,
+        "severity": "HIGH",
+        "x": 310,
+        "y": 163,
+        "title": "Apex Seal Compression Test",
+        "chip": "Apex seals",
+        "cost": "$170–250 parts · 2 h labor",
+        "why": "Ask for a compression test printout. Each rotor should read above 8.5 bar / 120 psi."
+      },
+      {
+        "n": 2,
+        "severity": "HIGH",
+        "x": 452,
+        "y": 168,
+        "title": "Coolant-in-Oil / Rotor Housing Leak",
+        "chip": "Coolant in oil",
+        "cost": "$340–500 parts · 4 h labor",
+        "why": "Pull the dipstick and look for milky oil. White smoke on a cold start is the clearest warning sign."
+      },
+      {
+        "n": 3,
+        "severity": "MED",
+        "x": 640,
+        "y": 338,
+        "title": "Catalytic Converter Condition",
+        "chip": "Catalytic converter",
+        "cost": "$430–630 parts · 1 h labor",
+        "why": "Rotaries run rich and destroy catalytic converters. Listen for a rattle under the car at idle."
+      }
+    ]
+  },
+  "severityColors": {
+    "HIGH": {
+      "bg": "#b32228",
+      "fg": "#ffffff"
     },
-    {
-      "n": 2,
-      "severity": "HIGH",
-      "title": "Coolant-in-Oil / Rotor Housing Leak",
-      "chip": "Coolant in oil",
-      "cost": "$340–500 parts · 4 h labor",
-      "why": "Pull the dipstick and look for milky oil. White smoke on a cold start is the clearest warning sign."
+    "MED": {
+      "bg": "#f59e0b",
+      "fg": "#121212"
     },
-    {
-      "n": 3,
-      "severity": "MED",
-      "title": "Catalytic Converter Condition",
-      "chip": "Catalytic converter",
-      "cost": "$430–630 parts · 1 h labor",
-      "why": "Rotaries run rich and destroy catalytic converters. Listen for a rattle under the car at idle."
+    "LOW": {
+      "bg": "#e5e4e2",
+      "fg": "#3f3f3d"
     }
-  ]
+  }
 }

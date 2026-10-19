@@ -21,7 +21,7 @@ const LEADERS = "M250 130 L310 163 M440 72 L452 168 M640 338 L640 405";
 // their text and the pin positions come from mazda-rx7.slots.json.
 // On mobile it sits in its own panel; on desktop the page band is the panel.
 export function SamplePreviewCard({ className = "" }: { className?: string }) {
-  const { image, findings, pins } = RX7_SAMPLE;
+  const { image, findings } = RX7_SAMPLE;
   const [aw, ah] = image.aspect;
   const [selected, setSelected] = useState(1);
   const caption = findings[selected - 1];
@@ -50,7 +50,7 @@ export function SamplePreviewCard({ className = "" }: { className?: string }) {
       <div className="relative mt-2 aspect-[1366/409] w-full lg:mt-2.5 lg:aspect-[1366/480]">
         <img
           src={image.src}
-          alt={image.alt}
+          alt="Line drawing of a Mazda RX-7 coupe"
           width={image.width}
           height={image.height}
           loading="eager"
@@ -79,7 +79,7 @@ export function SamplePreviewCard({ className = "" }: { className?: string }) {
 
         {/* Pins */}
         {findings.map((f, i) => {
-          const [x, y] = pins[i];
+          const { x, y } = f;
           const leftPct = (x / aw) * 100;
           const isSelected = selected === f.n;
           return (
