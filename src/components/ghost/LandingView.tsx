@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { SamplePreviewCard } from "./SamplePreviewCard";
 import { CarImage } from "./CarImage";
+import { MyReportsSection } from "./MyReportsSection";
 import { MARKETING_CONSENT_TEXT, MISSING_CAR_MAILTO, PRICE_USD } from "@/lib/ghost/constants";
 import type { AnalysisState } from "@/routes/index";
 
@@ -113,17 +114,6 @@ const ACCENT_LINK =
   "font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const STEP_LABEL =
   "font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-primary";
-
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-}
 
 function Select({
   id, value, onChange, options, placeholder, disabled, loading, selectRef,
@@ -434,45 +424,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
   const decodedByVin = mode === "vin" && vinDecoded && !!vinDecodeResult;
   const carName = `${year} ${make} ${model}`.trim();
 
-  const recentReports = history.length > 0 && (
-    <section
-      aria-label="Recent reports"
-      className="mt-4 rounded-card border border-card-border bg-white p-3.5"
-    >
-      <div className="mb-2 flex items-center gap-2 px-1">
-        <Clock aria-hidden="true" className="h-3.5 w-3.5 text-muted-text" />
-        <h2 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-muted-text">
-          Recent Reports
-        </h2>
-      </div>
-      <ul className="space-y-1.5">
-        {history.slice(0, 5).map((entry, i) => (
-          <li key={i}>
-            <button
-              type="button"
-              onClick={() => onLoadHistory(entry)}
-              className="group flex min-h-[44px] w-full items-center justify-between rounded-lg border border-card-border bg-white px-3 py-2 text-left transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <span className="min-w-0">
-                <span className="block text-[15px] font-medium text-ink">
-                  {entry.vehicle.year} {entry.vehicle.make} {entry.vehicle.model}
-                  {entry.vehicle.trim ? ` (${entry.vehicle.trim})` : ""}
-                </span>
-                <span className="block text-[13px] text-muted-text">
-                  ${entry.askingPrice.toLocaleString()} · {entry.marketplace} · {timeAgo(entry.timestamp)}
-                </span>
-              </span>
-              <ChevronRight
-                aria-hidden="true"
-                className="ml-3 h-4 w-4 shrink-0 text-muted-text transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-              />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-
   const stepHeader = (
     <div className="flex items-center gap-3.5">
       <span className={STEP_LABEL}>Step {step} of 2</span>
@@ -703,12 +654,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   <span className="inline-flex h-7 items-center rounded-full border border-card-border bg-chip px-3 font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-primary lg:border-panel-border lg:bg-white">
                     Free preview · No account
                   </span>
-                  <a
-                    href="/?demo=true"
-                    className="inline-flex h-11 items-center rounded-lg border border-card-border bg-white px-3.5 font-condensed text-sm font-semibold uppercase tracking-[0.06em] text-ink transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    Sample report
-                  </a>
                 </div>
                 <h1 className="mt-3 font-condensed text-[34px] font-bold uppercase leading-none tracking-[0.005em] lg:mt-[18px] lg:text-[62px] lg:leading-[0.98]">
                   Know what you're buying before you show up
@@ -753,7 +698,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                 </div>
                 <div className="mt-1.5 lg:mt-2">{missingLink}</div>
               </div>
-              {recentReports}
+              <MyReportsSection history={history} onOpen={onLoadHistory} />
             </div>
 
             {/* Works with */}
@@ -1028,7 +973,6 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             </form>
           </div>
 
-          {recentReports}
         </div>
       )}
     </section>

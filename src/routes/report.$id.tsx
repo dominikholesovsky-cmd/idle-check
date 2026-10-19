@@ -24,17 +24,25 @@ export const Route = createFileRoute("/report/$id")({
     if (error || !data) return { report: null };
     return { report: data.report_json as AnalysisState };
   },
+  validateSearch: (search: Record<string, unknown>): { from?: "my-reports" } =>
+    search.from === "my-reports" ? { from: "my-reports" } : {},
   component: SharedReport,
 });
 
 function SharedReport() {
   const { report } = Route.useLoaderData();
   const { id } = Route.useParams();
+  const { from } = Route.useSearch();
+  const backProps = {
+    showBack: true,
+    backLabel: (from === "my-reports" ? "My reports" : "Home") as "My reports" | "Home",
+    onBack: () => { window.location.href = from === "my-reports" ? "/#my-reports" : "/"; },
+  };
 
   if (!report) {
     return (
       <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-        <Navbar onNewReport={() => { window.location.href = "/"; }} />
+        <Navbar {...backProps} onNewReport={() => { window.location.href = "/"; }} />
         <main className="flex flex-1 items-center justify-center px-4">
           <div className="text-center">
             <p className="text-lg font-semibold">Report not found</p>
@@ -51,7 +59,7 @@ function SharedReport() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar onNewReport={() => { window.location.href = "/"; }} />
+      <Navbar {...backProps} onNewReport={() => { window.location.href = "/"; }} />
       <main className="relative z-10 flex-1">
         <ReportView
           vehicle={report.vehicle}

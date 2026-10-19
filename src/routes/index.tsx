@@ -18,6 +18,7 @@ import { MARKETING_CONSENT_TEXT } from "@/lib/ghost/constants";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import { loadReportBySession } from "@/lib/api/loadReportBySession";
 import { toPublicReportJson } from "@/lib/ghost/publicReport";
+import { useAccount } from "@/lib/account";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -158,6 +159,7 @@ const DEMO_ANALYSIS: AnalysisState = {
 };
 
 function Index() {
+  const account = useAccount();
   const [phase, setPhase] = useState<Phase>("landing");
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null);
   const [history, setHistory] = useState<AnalysisState[]>([]);
@@ -299,6 +301,13 @@ function Index() {
       window.scrollTo({ top: 0 });
     }
   }, [animationReady]);
+
+  // Coming back from /report/:id?from=my-reports lands on /#my-reports
+  useEffect(() => {
+    if (window.location.hash === "#my-reports") {
+      setTimeout(() => document.getElementById("my-reports")?.scrollIntoView({ block: "start" }), 120);
+    }
+  }, []);
 
   // Po Stripe redirectu — zavolej Claude API
   useEffect(() => {
@@ -568,7 +577,18 @@ function Index() {
     setClaudePromise(promise);
   };
 
+  // Back button: Home resets the app. A report opened from the saved-reports list returns to that list.
+  const openedFromListRef = useRef(false);
+  const goBack = () => {
+    const toReports = openedFromListRef.current;
+    goHome();
+    if (toReports) {
+      setTimeout(() => document.getElementById("my-reports")?.scrollIntoView({ block: "start" }), 60);
+    }
+  };
+
   const goHome = () => {
+    openedFromListRef.current = false;
     setPhase("landing");
     setAnalysis(null);
     setAnalyzeError(null);
@@ -587,7 +607,14 @@ function Index() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#f5f4f0] text-zinc-950">
-      <Navbar onNewReport={phase !== "landing" ? goHome : undefined} />
+      <Navbar
+        showAccount={phase === "landing"}
+        showBack={phase === "preview" || phase === "report"}
+        backLabel={openedFromListRef.current ? "My reports" : "Home"}
+        onBack={goBack}
+        onNewReport={phase === "report" ? goHome : undefined}
+        onLogoClick={phase === "preview" || phase === "report" ? goHome : undefined}
+      />
       <main className="relative z-10 flex-1">
         {phase === "landing" && (
           <LandingView
@@ -596,6 +623,7 @@ function Index() {
             onLoadHistory={(rawEntry) => {
               const valid = validateAndMigrateEntry(rawEntry);
               if (valid) {
+                openedFromListRef.current = true;
                 setAnalysis(valid);
                 setShareId(valid.shareId ?? null);
                 setPhase(valid.unlocked ? "report" : "preview");
@@ -623,6 +651,9 @@ function Index() {
             paymentError={analyzeError}
             askingPrice={analysis.askingPrice}
             marketplace={analysis.marketplace}
+            isAdmin={account.isAdmin}
+            adminEmail={account.email}
+            onSignOut={() => void account.signOut()}
           />
         )}
 

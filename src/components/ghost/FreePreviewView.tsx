@@ -171,6 +171,10 @@ export function FreePreviewView({
   paymentError,
   askingPrice,
   marketplace,
+  isAdmin = false,
+  adminEmail,
+  onAdminUnlock,
+  onSignOut,
 }: {
   vehicle: Vehicle;
   issues: Issue[];
@@ -178,6 +182,11 @@ export function FreePreviewView({
   paymentError?: string | null;
   askingPrice: number;
   marketplace?: string;
+  /** Admin accounts only (verified by the server in phase 08). Nothing admin is rendered otherwise. */
+  isAdmin?: boolean;
+  adminEmail?: string;
+  onAdminUnlock?: () => void | Promise<void>;
+  onSignOut?: () => void;
 }) {
   const free = issues.slice(0, 3);
   const isDesktop = useIsDesktop();
@@ -234,6 +243,21 @@ export function FreePreviewView({
     }, 3000);
   };
 
+  const handleAdminUnlock = async () => {
+    if (inFlight.current || !onAdminUnlock) return;
+    inFlight.current = true;
+    setOpening(true);
+    try {
+      await onAdminUnlock();
+    } catch {
+      // handled by the parent
+    }
+    resetTimer.current = setTimeout(() => {
+      inFlight.current = false;
+      setOpening(false);
+    }, 3000);
+  };
+
   const toggle = (id: string) =>
     setOpenIds((prev) => {
       const next = new Set(prev);
@@ -272,6 +296,27 @@ export function FreePreviewView({
         backgroundSize: "20px 20px",
       }}
     >
+      {isAdmin && (
+        <div className="border-b border-[#f3dfa8] bg-[#fff8e8]">
+          <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-0.5 lg:px-6">
+            <span className="inline-flex h-[22px] items-center rounded bg-[#f59e0b] px-2 font-condensed text-xs font-bold tracking-[0.08em] text-ink">
+              ADMIN
+            </span>
+            <span className="text-sm leading-[1.4] text-[#7a4a00]">
+              {adminEmail ? `${adminEmail} · ` : ""}payment is skipped for you
+            </span>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="ml-auto inline-flex min-h-[44px] items-center text-sm font-semibold text-[#7a4a00] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Sign out
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-[1120px] px-4 pb-32 pt-3 lg:px-6 lg:pb-12 lg:pt-8">
         {/* Hero */}
         <div className="rounded-card-sm border border-card-border bg-white p-5 lg:flex lg:flex-wrap lg:items-center lg:gap-8 lg:p-10">
@@ -414,6 +459,21 @@ export function FreePreviewView({
               >
                 {buttonLabel}
               </button>
+              {isAdmin && onAdminUnlock && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleAdminUnlock}
+                    disabled={opening}
+                    className="mt-2.5 flex h-12 w-full items-center justify-center rounded-field border border-dashed border-[#b9770a] bg-transparent text-[15px] font-semibold text-[#7a4a00] transition-colors hover:bg-[#fff8e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Unlock without payment (admin)
+                  </button>
+                  <p className="mt-1.5 text-center text-[13px] leading-[1.4] text-[#7a4a00]">
+                    Runs the analysis without a Stripe payment. Only admin accounts see this.
+                  </p>
+                </>
+              )}
             </div>
             <p className="mt-3 text-center text-[13px] text-muted-text">
               Credit card · Apple Pay · Google Pay. No account needed.

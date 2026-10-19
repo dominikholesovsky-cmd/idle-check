@@ -172,6 +172,13 @@ export function SamplePreviewCard({ className = "" }: { className?: string }) {
           <div className="mt-1.5 font-mono text-[22px] font-bold text-[#b9770a]">{counts.MED}</div>
         </div>
       </div>
+      {/* Mobile: the header has no Sample report link, so it lives here (desktop: header) */}
+      <a
+        href="/?demo=true"
+        className="mt-1.5 inline-flex min-h-[44px] items-center text-[15px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:hidden"
+      >
+        See a full sample report
+      </a>
     </section>
   );
 }
