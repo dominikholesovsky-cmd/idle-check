@@ -6,7 +6,7 @@ Obsah
 - `CLAUDE_CODE_BRIEF.md`: hlavní zadání (kontext, pravidla, tokeny, pravidla pro e-maily a soukromí).
 - `prompts/00` až `05`: šest fází. Spouštěj je po jedné, v tomto pořadí.
 - `design-reference/*.html`: všechny obrazovky z návrhu. Otevři v prohlížeči (fonty se stahují z internetu).
-- `assets/`: OBD logo, dvě auta a `pin-slots.json` (pozice pinů).
+- `assets/`: OBD logo, dvě generická auta, `pin-slots.json` (pozice pinů) a složka `cars/` s tvým RX-7 (obrázek, pozice pinů, návod na přidání dalších aut).
 - `sql/001-leads-and-owners.sql`: tabulky pro e-maily. Spouštíš ty sám v Supabase před fází 5.
 
 Pořadí fází

@@ -36,6 +36,13 @@ Other requirements
 - Keep: PDF export (logic untouched, see the brief for the one color-mapping fix), share modal and link, `saveError` banner with retry, the Demo badge, `isSharedView`, compatibility with `src/routes/report.$id.tsx`. Share and PDF go in the title block (icon buttons on mobile, labeled buttons on desktop); Navbar keeps New report.
 - The report must never show the owner's email.
 
+## Per-model car images (new)
+Besides the generic vector cars, the report can show a real line drawing for models that have one. Today only the Mazda RX-7 does (`assets/cars/mazda-rx7.png` and `mazda-rx7.slots.json`; see `assets/cars/README.md`).
+- Create `src/lib/ghost/carImages.ts`: a registry `{ match: RegExp, make: RegExp, src, slots }` and `carImageFor(vehicle)` returning the entry or `null`. RX-7 matches when make is Mazda and model matches `/rx-?7/i`. Copy the PNG to `public/images/cars/` and the slots JSON next to the registry.
+- `CarIllustration` (or a small wrapper) renders the image when `carImageFor` returns an entry, otherwise the generic vector from `bodyStyleFor`. For image cars, show the whole image (no crop), position pins in percent from the image's own slots, and use the same assignment rule, severity colors, hover tooltip, row highlight and mobile caption as the generic car. Pins 30 px on desktop and 26 px on mobile. The car faces left, so tooltips for pins in the left 30% align to the pin's left edge and pins in the right 35% align to the right edge.
+- Use `carImageFor` in the landing step 2 "confirmed car" card as well (image when available, otherwise the generic vector), so the two screens agree.
+- Do not add images for other models. The registry only needs to support them.
+
 ## Acceptance
 - Build passes. Test with demo mode, a real flow through the admin bypass, and an old saved report opened through `/report/:id` (no market numbers, no `savedToEmail`; must not break).
 - Ticking and unticking findings updates the budget bar, offer, ruler and message together and they always agree.

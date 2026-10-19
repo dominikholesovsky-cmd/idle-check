@@ -6,11 +6,20 @@ Code: `src/components/ghost/LandingView.tsx`, plus the small `src/routes/index.t
 ## Layout
 - Mobile: header, hero text, illustrated sample card, step card, "Works with listings from", "How it works" list, footer.
 - Desktop (wide, not two narrow columns):
-  - Full-bleed band `#ece9e1` (1px bottom border `#e0ddd4`), inner container max 1200 px with 48 px side padding. Left: pill, H1 (62 px Barlow Condensed uppercase), paragraph, three checkmarks. Right: the sample card (large roadster `CarIllustration` with three label pins "Rust check", "Soft top", "Timing chain" and a stats strip NEGOTIATE, $2,290–5,220 repairs, 5 red flags). The sample card is static marketing content labeled "Sample report"; do not make it dynamic.
+  - Full-bleed band `#ece9e1` (1px bottom border `#e0ddd4`), inner container max 1200 px with 48 px side padding. Left: pill, H1 (62 px Barlow Condensed uppercase), paragraph, three checkmarks. Right: the sample card (see "Sample card" below).
   - Finder bar: white card, radius 20, max width 1104, overlapping the band's bottom edge by 56 px. Top row: step label with a two-segment bar (left) and the mode switch (right, about 340 px). Below: the inputs and the Continue button on one row, then the helper text and the "Missing your car or engine? Let us know" link.
   - Below the bar: "Works with listings from" as one centered row of plain text wordmarks, "How it works" as three tiles (icon, large step number, title, text), footer.
   - Step 2 is its own view (`landing-desktop-step2`): max width 1100, step label, title "Now the listing", one white card with two columns. Left: confirmed-car card (illustration, "Decoded from your VIN" when decoded, car name, engine, "Change car"). Right: Asking price, Mileage and Engine in a three-column row, Listing text, then a bottom row with Email and the "Run free inspection" button.
 - Keep all UI copy from the mocks verbatim.
+
+## Sample card (both screen sizes)
+Static marketing content, labeled "Sample preview" with "Mazda RX-7" beside it. Do not make it dynamic.
+- Image: copy `design-handoff/assets/cars/mazda-rx7.png` to `public/images/cars/mazda-rx7.png` and render it with a plain `<img>` (alt "Line drawing of a Mazda RX-7 coupe", explicit width and height, `loading="eager"` on the landing page). It is a palette PNG with transparency and a white body fill, so it sits directly on the `#ece9e1` panel. Do not recolor it. The generic vector `CarIllustration` is not used on the landing page anymore.
+- Three pins over the image, positioned in percent from `assets/cars/mazda-rx7.slots.json` (use its `sampleFindings`, which are the app's real free-preview findings for an RX-7 from `generateIssues`; keep a code comment pointing to `src/lib/ghost/procedural.ts`). Pin 1 and 2 are HIGH (primary), pin 3 is MED (amber, dark text).
+- Desktop: pins are 30 px real `<button>`s. Each has a visible label chip with a leader line (Apex seals, Coolant in oil, Catalytic converter; see the mock for placement). Hover or keyboard focus opens a tooltip (severity pill, full finding title, cost line, one-sentence hint). Tooltips for pins in the left 30% of the image align to the pin's left edge (the car faces left). Header row hint: "Hover a pin".
+- Mobile: pins are 26 px, numbered, without chips. Tapping a pin selects it and shows its details in the caption bar under the image (badge, severity pill, title, cost, hint); pin 1 is selected by default. Header row hint: "Tap a pin". Under the caption: "3 free findings" with HIGH 2 and MED 1.
+- Desktop stats strip under the image: Free findings 3, High 2, Medium 1.
+- Respect `prefers-reduced-motion`; no animation is required.
 
 ## Behavior (keep existing logic, restructure into two steps)
 Step 1, the car. A mode switch (`role="tablist"`, labels "I have a VIN" and "No VIN") chooses one of two input sets. Only the chosen set is rendered (the VIN input is not shown in manual mode and the pickers are not shown in VIN mode). Each mode keeps its own values when you switch back and forth.

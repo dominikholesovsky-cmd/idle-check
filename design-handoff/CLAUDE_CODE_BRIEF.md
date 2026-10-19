@@ -57,6 +57,7 @@ Add as CSS variables in `src/styles.css` and expose through the Tailwind theme. 
 ## Shared building blocks (phase 0)
 - `ObdLogo` (`size`, `litPins` 0 to 14, `className`), vector from `assets/obd-logo.svg`.
 - `CarIllustration` (`body: 'roadster' | 'sedan'`, `viewBox` override), from `assets/roadster.svg` and `assets/sedan.svg`, body color = primary token, unique clipPath ids via `useId`.
+- Car images: generic vector cars for every model, plus an optional line-drawing PNG per model (only Mazda RX-7 exists now, in `assets/cars/`). A model without an image always falls back to the generic vector. Never show a car image that does not match the vehicle in a report. The landing page sample card is the only place that shows the RX-7 regardless of the vehicle, because it is a labeled sample.
 - `src/lib/ghost/constants.ts`: `PRICE_USD = 4.99`, `SUPPORT_EMAIL = 'idlecheckapp@gmail.com'`, `MISSING_CAR_MAILTO` (subject `Missing car or engine`, body `Hi, I could not find my car or engine:`).
 
 ## Decisions already made (do not re-open)
