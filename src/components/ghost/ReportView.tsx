@@ -11,7 +11,7 @@ import { PriceRuler } from "./PriceRuler";
 import { FindingsCar } from "./FindingsCar";
 import { FindingsList } from "./FindingsList";
 import { generateRecommendation } from "@/lib/ghost/procedural";
-import { assignPins, bodyStyleFor, computeOffer, sortFindings } from "@/lib/ghost/report";
+import { assignPins, computeOffer, sortFindings } from "@/lib/ghost/report";
 import { carImageFor } from "@/lib/ghost/carImages";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
@@ -101,14 +101,14 @@ export function ReportView({
   // One offer calculation for the whole report
   const { partsTotal, repairTotal, suggestedOffer } = computeOffer(checkedIssues, askingPrice || 0);
 
-  // A real drawing for this model if one is registered, otherwise the generic vector car.
+  // One car line drawing for every vehicle (model-specific ones are looked up first).
   const carImage = useMemo(
     () => carImageFor({ make: vehicle?.make, model: vehicle?.model }),
     [vehicle?.make, vehicle?.model],
   );
   const pins = useMemo(
-    () => assignPins(sortedIssues, carImage ? carImage.slots : bodyStyleFor({ model: vehicle?.model ?? "" })),
-    [sortedIssues, carImage, vehicle?.model],
+    () => assignPins(sortedIssues, carImage),
+    [sortedIssues, carImage],
   );
 
   const safeRecommendation = useMemo(() => {
@@ -586,10 +586,10 @@ export function ReportView({
         }}
       >
         <div className="mx-auto max-w-[1120px] px-4 pb-10 pt-[18px] lg:px-6 lg:pt-7">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-x-6">
+          <div className="flex flex-col gap-4">
 
             {/* Title block */}
-            <header className="flex items-start justify-between gap-3 lg:col-span-2 lg:items-end lg:gap-8 lg:pb-1">
+            <header className="flex items-start justify-between gap-3 lg:items-end lg:gap-8 lg:pb-1">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex h-[26px] items-center rounded-full border border-card-border bg-chip px-2.5 font-condensed text-xs font-bold uppercase tracking-[0.12em] text-primary">
@@ -643,7 +643,7 @@ export function ReportView({
             </header>
 
             {saveError && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 lg:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-600" />
                   <span role="alert" className="text-[13px] text-amber-800">
@@ -663,66 +663,68 @@ export function ReportView({
               </div>
             )}
 
-            {/* Hero. On mobile these are plain siblings (car, verdict, offer); on desktop the verdict
-                sits left and the car and red flags stack on the right. */}
-            <div className="contents lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-x-6 lg:gap-y-4">
-              <div className="lg:col-start-2 lg:row-start-1">
-                <FindingsCar
-                  body={bodyStyleFor({ model: vehicle.model })}
-                  image={carImage}
-                  pins={pins}
-                  findings={sortedIssues}
-                  active={activeFinding}
-                  onActive={setActiveFinding}
-                  onJump={jumpTo}
-                />
+            {/* Two independent columns on desktop (no shared row, so no empty gap under the shorter card).
+                On mobile the column wrappers disappear and `order` gives the single-column sequence:
+                car, verdict, offer, red flags, findings, message to the seller, recalls. */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:gap-6">
+              {/* Left column: verdict, then findings */}
+              <div className="contents lg:flex lg:min-w-0 lg:flex-[999_1_600px] lg:flex-col lg:gap-6">
+                <div className="order-2 lg:order-none">
+                  <RecommendationCard recommendation={safeRecommendation}>
+                    <div className="mt-5 hidden lg:block">
+                      <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
+                        Your offer vs. the market
+                      </h3>
+                      <PriceRuler {...rulerProps} />
+                    </div>
+                  </RecommendationCard>
+                </div>
+
+                {hasRedFlags && <div className="order-4 lg:hidden">{redFlags}</div>}
+
+                <div className="order-5 min-w-0 lg:order-none">
+                  <FindingsList
+                    findings={sortedIssues}
+                    checked={checked}
+                    onToggle={toggle}
+                    active={activeFinding}
+                    onActive={setActiveFinding}
+                    jump={jump}
+                  />
+                </div>
               </div>
 
-              <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
-                <RecommendationCard recommendation={safeRecommendation}>
-                  <div className="mt-5 hidden lg:block">
+              {/* Right column: car, red flags, offer, recalls (not sticky) */}
+              <aside className="contents lg:flex lg:min-w-0 lg:max-w-[420px] lg:flex-[1_1_360px] lg:flex-col lg:gap-4">
+                <div className="order-1 lg:order-none">
+                  <FindingsCar
+                    image={carImage}
+                    pins={pins}
+                    findings={sortedIssues}
+                    active={activeFinding}
+                    onActive={setActiveFinding}
+                    onJump={jumpTo}
+                  />
+                </div>
+
+                {/* Mobile offer card */}
+                <section aria-label="Suggested offer" className="order-3 rounded-card border-2 border-primary bg-white p-[18px] lg:hidden">
+                  {offerHeader}
+                  <div className="mt-5">
                     <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
                       Your offer vs. the market
                     </h3>
                     <PriceRuler {...rulerProps} />
                   </div>
-                </RecommendationCard>
-              </div>
+                  <div className="mt-3.5 border-t border-card-border pt-3.5">
+                    <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
+                  </div>
+                  <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
+                </section>
 
-              {/* Mobile offer card */}
-              <section aria-label="Suggested offer" className="rounded-card border-2 border-primary bg-white p-[18px] lg:hidden">
-                {offerHeader}
-                <div className="mt-5">
-                  <h3 className="font-condensed text-[13px] font-bold uppercase tracking-[0.12em] text-text-2">
-                    Your offer vs. the market
-                  </h3>
-                  <PriceRuler {...rulerProps} />
-                </div>
-                <div className="mt-3.5 border-t border-card-border pt-3.5">
-                  <RepairCostTracker partsTotal={partsTotal} repairTotal={repairTotal} />
-                </div>
-                <CopyMessageButton script={script} label="Copy message to seller" variant="primary" className="mt-4" />
-              </section>
+                {/* Desktop red flags sit under the car */}
+                {hasRedFlags && <div className="hidden lg:block">{redFlags}</div>}
 
-              {/* Desktop red flags sit under the car */}
-              {hasRedFlags && <div className="hidden lg:col-start-2 lg:row-start-2 lg:block">{redFlags}</div>}
-            </div>
-
-            {/* Main row: findings on the left, offer and recalls in a sticky column on desktop */}
-            <div className="contents lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-x-6">
-              <div className="flex min-w-0 flex-col gap-4">
-                {hasRedFlags && <div className="lg:hidden">{redFlags}</div>}
-                <FindingsList
-                  findings={sortedIssues}
-                  checked={checked}
-                  onToggle={toggle}
-                  active={activeFinding}
-                  onActive={setActiveFinding}
-                  jump={jump}
-                />
-              </div>
-
-              <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
                 {/* Desktop offer card: offer, budget, message */}
                 <section aria-label="Suggested offer" className="hidden rounded-card border-2 border-primary bg-white p-[22px] lg:block">
                   {offerHeader}
@@ -740,7 +742,7 @@ export function ReportView({
                     />
                   </div>
                 </section>
-                <div className="mt-2 lg:hidden">
+                <div className="order-6 mt-2 lg:hidden">
                   <NegotiationScript
                     vehicle={vehicle}
                     askingPrice={displayPrice}
@@ -749,11 +751,13 @@ export function ReportView({
                     suggestedOffer={suggestedOffer}
                   />
                 </div>
-                <RecallSection recalls={recalls} badge={recallBadge} className="" />
+                <div className="order-7 lg:order-none">
+                  <RecallSection recalls={recalls} badge={recallBadge} className="" />
+                </div>
               </aside>
             </div>
 
-            <p className="border-t border-card-border pt-4 text-[13px] leading-[1.5] text-muted-text lg:col-span-2 lg:mt-4 lg:text-sm">
+            <p className="border-t border-card-border pt-4 text-[13px] leading-[1.5] text-muted-text lg:mt-4 lg:text-sm">
               Estimates are for informational purposes. Always have a licensed mechanic inspect the car before you buy.
             </p>
           </div>

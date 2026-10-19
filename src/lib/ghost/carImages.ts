@@ -3,7 +3,6 @@ import rx7 from "./mazda-rx7.slots.json";
 
 export type CarCrop = "full" | "front";
 export type ZoneName = Category | "overflow";
-type Slots = Record<Category, [number, number][]>;
 
 export interface CarImageEntry {
   src: string;
@@ -19,8 +18,6 @@ export interface CarImageEntry {
   pinSizePx: { desktop: number; mobile: number };
   /** Pin slots per zone, in the order they are used. */
   zones: Record<ZoneName, [number, number][]>;
-  /** The three category zones only (the older, category-only view of the same slots). */
-  slots: Slots;
 }
 
 const RX7: CarImageEntry = {
@@ -33,26 +30,21 @@ const RX7: CarImageEntry = {
   mobileCrop: rx7.mobileCrop,
   pinSizePx: rx7.pinSizePx,
   zones: rx7.zones as Record<ZoneName, [number, number][]>,
-  slots: {
-    "Engine & Drivetrain": rx7.zones["Engine & Drivetrain"] as [number, number][],
-    "Body & Electrical": rx7.zones["Body & Electrical"] as [number, number][],
-    "Chassis & Suspension": rx7.zones["Chassis & Suspension"] as [number, number][],
-  },
 };
 
 // Model-specific drawings are checked first once any exist (see design-handoff/assets/cars/README.md).
 const MODEL_ENTRIES: { make: RegExp; match: RegExp; image: CarImageEntry }[] = [];
 
 /**
- * The picture for a vehicle. Today this is the Mazda RX-7 line drawing for Mazda RX-7s only; phase 09
- * makes it the single image for every vehicle.
+ * The picture for a vehicle: the single RX-7 line drawing for every make and model. Model-specific
+ * entries (checked first) can be added to MODEL_ENTRIES later.
  */
-export function carImageFor(vehicle: { make?: string; model?: string }): CarImageEntry | null {
+export function carImageFor(vehicle: { make?: string; model?: string }): CarImageEntry {
   const make = (vehicle.make ?? "").trim();
   const model = (vehicle.model ?? "").trim();
   const specific = MODEL_ENTRIES.find((e) => e.make.test(make) && e.match.test(model));
   if (specific) return specific.image;
-  return /^mazda$/i.test(make) && /rx-?7/i.test(model) ? RX7 : null;
+  return RX7;
 }
 
 /** The RX-7 drawing and the three fixed sample pins of the landing page sample card. */

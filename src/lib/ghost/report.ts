@@ -1,4 +1,5 @@
-import type { Category, Issue, Severity, Urgency, Vehicle } from "./types";
+import type { Issue, Severity, Urgency } from "./types";
+import type { CarImageEntry, ZoneName } from "./carImages";
 
 export const LABOUR_RATE = 120;
 
@@ -43,69 +44,41 @@ export function computeOffer(checkedIssues: Issue[], askingPrice: number): Offer
   return { partsTotal, labourTotal, repairTotal, suggestedOffer };
 }
 
-// ─── Car illustration pins ───────────────────────────────────────────────────
-
-export type BodyStyle = "roadster" | "sedan";
-
-export function bodyStyleFor(vehicle: Pick<Vehicle, "model">): BodyStyle {
-  return /miata|mx-?5|s2000|z[34]\b|boxster|slk|solstice|mr-?2|4c|r8/i.test(vehicle.model ?? "")
-    ? "roadster"
-    : "sedan";
-}
-
-type Slots = Record<Category, [number, number][]>;
-
-// Positions in the 520x224 viewBox of the car SVGs (from design-handoff/assets/pin-slots.json).
-// Every slot lies inside CAR_CROP: the report always shows the car cropped to that window.
-const PIN_SLOTS: Record<BodyStyle, Slots> = {
-  sedan: {
-    "Engine & Drivetrain": [[424, 134], [396, 129], [368, 124], [457, 155], [340, 120]],
-    "Chassis & Suspension": [[384, 152], [388, 178], [290, 176]],
-    "Body & Electrical": [[300, 142], [205, 100], [230, 142]],
-  },
-  roadster: {
-    "Engine & Drivetrain": [[420, 139], [392, 134], [364, 128], [457, 156], [338, 123]],
-    "Chassis & Suspension": [[382, 150], [382, 178], [290, 176]],
-    "Body & Electrical": [[222, 86], [276, 140], [200, 126]],
-  },
-};
-
-/** The report shows the car cropped to this window on every screen size. */
-export const CAR_CROP = { x: 160, y: 74, width: 330, height: 134 };
-export const CAR_CROP_VIEWBOX = `${CAR_CROP.x} ${CAR_CROP.y} ${CAR_CROP.width} ${CAR_CROP.height}`;
-
-/** Position of a pin as percentages of the cropped car. */
-export function pinPercent(pin: { x: number; y: number }): { left: number; top: number } {
-  return {
-    left: ((pin.x - CAR_CROP.x) / CAR_CROP.width) * 100,
-    top: ((pin.y - CAR_CROP.y) / CAR_CROP.height) * 100,
-  };
-}
+// ─── Car image pins ──────────────────────────────────────────────────────────
 
 export interface Pin {
   /** Finding number: position in the sorted list, starting at 1. */
   number: number;
   issueId: string;
   severity: Severity;
+  /** Slot position in the image's coordinate system (see CarImageEntry.aspect). */
   x: number;
   y: number;
 }
 
+const ZONE_ORDER: ZoneName[] = ["Engine & Drivetrain", "Body & Electrical", "Chassis & Suspension", "overflow"];
+
 /**
- * Takes findings already sorted with `sortFindings`. Each finding takes the next free slot
- * of its category zone. A finding without a free slot gets no pin and stays in the list.
+ * Takes findings already sorted with `sortFindings`. Each finding takes the next free slot of its category
+ * zone (unknown categories count as Body & Electrical). If that zone is full it takes the next free slot of
+ * the first zone that has one, in ZONE_ORDER. With nothing free there is no pin and the finding stays in the list.
  */
-export function assignPins(sortedFindings: Issue[], bodyOrSlots: BodyStyle | Slots): Pin[] {
-  const slotsByCategory = typeof bodyOrSlots === "string" ? PIN_SLOTS[bodyOrSlots] : bodyOrSlots;
+export function assignPins(sortedFindings: Issue[], image: CarImageEntry): Pin[] {
   const used: Record<string, number> = {};
+  const next = (zone: ZoneName): [number, number] | null => {
+    const slots = image.zones[zone] ?? [];
+    const n = used[zone] ?? 0;
+    if (n >= slots.length) return null;
+    used[zone] = n + 1;
+    return slots[n];
+  };
   const pins: Pin[] = [];
   sortedFindings.forEach((issue, i) => {
-    const slots = slotsByCategory[issue.category] ?? [];
-    const next = used[issue.category] ?? 0;
-    if (next >= slots.length) return;
-    used[issue.category] = next + 1;
-    const [x, y] = slots[next];
-    pins.push({ number: i + 1, issueId: issue.id, severity: issue.severity, x, y });
+    const own: ZoneName = image.zones[issue.category as ZoneName] ? (issue.category as ZoneName) : "Body & Electrical";
+    let slot = next(own);
+    for (let z = 0; !slot && z < ZONE_ORDER.length; z++) slot = next(ZONE_ORDER[z]);
+    if (!slot) return;
+    pins.push({ number: i + 1, issueId: issue.id, severity: issue.severity, x: slot[0], y: slot[1] });
   });
   return pins;
 }

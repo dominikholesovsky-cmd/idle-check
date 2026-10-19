@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type R
 import { ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { SamplePreviewCard } from "./SamplePreviewCard";
-import { VehicleCar } from "./VehicleCar";
+import { CarImage } from "./CarImage";
 import { MARKETING_CONSENT_TEXT, MISSING_CAR_MAILTO, PRICE_USD } from "@/lib/ghost/constants";
 import type { AnalysisState } from "@/routes/index";
 
@@ -823,8 +823,9 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
           <div className="mt-4 lg:mt-[22px] lg:flex lg:flex-wrap lg:items-start lg:gap-x-9 lg:gap-y-7 lg:rounded-[20px] lg:border lg:border-card-border lg:bg-white lg:p-7">
             {/* Confirmed car */}
             <aside className="flex items-center gap-3 rounded-card-sm border border-card-border bg-white px-3.5 py-3 lg:block lg:min-w-[260px] lg:flex-[0_1_320px] lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
-              <div className="w-[92px] shrink-0 rounded-[10px] bg-panel px-1.5 py-1 lg:w-full lg:rounded-[18px] lg:border lg:border-panel-border lg:p-[18px]">
-                <VehicleCar make={make} model={model} className="h-full w-full" decorative />
+              <div className="w-[112px] shrink-0 rounded-[10px] bg-panel px-1.5 py-1.5 lg:w-full lg:rounded-[18px] lg:border lg:border-panel-border lg:p-[18px]">
+                <CarImage crop="front" className="lg:hidden" />
+                <CarImage crop="full" className="hidden lg:block" />
               </div>
               <div className="min-w-0 flex-1 lg:mt-3.5 lg:rounded-card-sm lg:border lg:border-card-border lg:bg-white lg:px-4 lg:py-3.5">
                 {decodedByVin && (

@@ -1,6 +1,6 @@
-import { CarIllustration } from "./CarIllustration";
-import { CAR_CROP, CAR_CROP_VIEWBOX, pinPercent, type BodyStyle, type Pin } from "@/lib/ghost/report";
-import type { CarImageEntry } from "@/lib/ghost/carImages";
+import { CarImage } from "./CarImage";
+import type { Pin } from "@/lib/ghost/report";
+import { carPinPercent, type CarCrop, type CarImageEntry } from "@/lib/ghost/carImages";
 import type { Issue, Severity } from "@/lib/ghost/types";
 
 function usd(n: number): string {
@@ -17,11 +17,10 @@ function costLine(issue: Issue): string {
   return `${usd(issue.partsCostMin)}–${Math.round(issue.partsCostMax).toLocaleString("en-US")} parts · ${issue.labourHours} h labor`;
 }
 
-// The car, always cropped to the same window, with a numbered pin per finding. Pin numbers match the
+// The car image (full on desktop, the "front" crop on mobile), with a numbered pin per finding. Pin numbers match the
 // findings list. Desktop: hover or focus a pin for a tooltip, click to jump to the finding.
 // Mobile: tap a pin to see its description in the caption bar; "Details" jumps to the finding.
 export function FindingsCar({
-  body,
   image,
   pins,
   findings,
@@ -29,9 +28,7 @@ export function FindingsCar({
   onActive,
   onJump,
 }: {
-  body: BodyStyle;
-  /** A real line drawing for this model, shown whole. Without one the generic vector car is shown cropped. */
-  image?: CarImageEntry | null;
+  image: CarImageEntry;
   pins: Pin[];
   /** Findings in display order, so findings[n - 1] is finding n. */
   findings: Issue[];
@@ -43,6 +40,55 @@ export function FindingsCar({
   // On mobile the first finding is selected until the user picks another one.
   const captionN = active ?? 1;
   const caption = findings[captionN - 1];
+
+  const renderPins = (crop: CarCrop) =>
+    pins.map((pin) => {
+      const issue = findings[pin.number - 1];
+      if (!issue) return null;
+      const pos = carPinPercent(image, pin.x, pin.y, crop);
+      const fullLeft = (pin.x / image.aspect[0]) * 100;
+      const isActive = active === pin.number;
+      // Mobile only: the default selection gets the ring until the user taps something.
+      const defaultRing = active === null && pin.number === 1;
+      // Tooltips stay inside the card. The image cars face left, so pins in the left 30% align to
+      // the pin's left edge. Pins in the right 35% align to the right edge.
+      const alignLeft = fullLeft < 30;
+      const alignRight = fullLeft > 65;
+      return (
+        <button
+          key={`${crop}-${pin.number}`}
+          type="button"
+          data-n={pin.number}
+          aria-label={`Finding ${pin.number}: ${issue.label}`}
+          onMouseEnter={() => onActive(pin.number)}
+          onMouseLeave={() => onActive(null)}
+          onFocus={() => onActive(pin.number)}
+          onBlur={() => onActive(null)}
+          onClick={() => handlePinClick(pin.number)}
+          style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
+          className={`group absolute z-[1] inline-flex h-6 w-6 lg:h-[26px] lg:w-[26px] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 font-condensed text-sm font-bold transition-shadow before:absolute before:-inset-1 before:content-[''] hover:z-[6] hover:shadow-[0_0_0_3px_#121212] focus-visible:z-[6] focus-visible:shadow-[0_0_0_3px_#121212] focus-visible:outline-none motion-reduce:transition-none ${PIN_COLOR[pin.severity]} ${
+            isActive ? "z-[6] shadow-[0_0_0_3px_#121212]" : defaultRing ? "z-[5] shadow-[0_0_0_3px_#121212] lg:z-[1] lg:shadow-none" : ""
+          }`}
+        >
+          {pin.number}
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute bottom-[calc(100%+12px)] z-[9] hidden w-[236px] rounded-[10px] border border-input-border bg-white px-3 py-2.5 text-left font-sans text-[13px] font-normal leading-[1.35] text-ink shadow-[0_8px_20px_rgba(18,18,18,0.14)] lg:group-hover:block lg:group-focus-visible:block ${
+              alignLeft ? "-left-2.5" : alignRight ? "-right-2.5" : "left-1/2 -translate-x-1/2"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className={`inline-flex h-[22px] items-center rounded px-2 font-condensed text-xs font-bold tracking-[0.08em] ${PIN_COLOR[issue.severity]}`}>
+                {issue.severity}
+              </span>
+              <strong className="text-sm leading-tight">{issue.label}</strong>
+            </span>
+            <span className="mt-1.5 block font-mono text-xs text-text-2">{costLine(issue)}</span>
+            <span className="mt-1 block text-xs text-muted-text">Click to jump to the finding</span>
+          </span>
+        </button>
+      );
+    });
 
   const handlePinClick = (n: number) => {
     if (window.matchMedia("(min-width: 1024px)").matches) onJump(n);
@@ -64,70 +110,14 @@ export function FindingsCar({
         </span>
       </div>
 
-      <div
-        className="relative mt-2 w-full lg:mt-10"
-        style={{ aspectRatio: image ? `${image.aspect[0]} / ${image.aspect[1]}` : `${CAR_CROP.width} / ${CAR_CROP.height}` }}
-      >
-        {image ? (
-          <img
-            src={image.src}
-            alt={image.alt}
-            width={image.width}
-            height={image.height}
-            loading="lazy"
-            className="absolute left-0 top-0 block h-auto w-full"
-          />
-        ) : (
-          <CarIllustration body={body} viewBox={CAR_CROP_VIEWBOX} className="h-full w-full" decorative />
-        )}
-        {pins.map((pin) => {
-          const issue = findings[pin.number - 1];
-          if (!issue) return null;
-          const pos = image
-            ? { left: (pin.x / image.aspect[0]) * 100, top: (pin.y / image.aspect[1]) * 100 }
-            : pinPercent(pin);
-          const isActive = active === pin.number;
-          // Mobile only: the default selection gets the ring until the user taps something.
-          const defaultRing = active === null && pin.number === 1;
-          // Tooltips stay inside the card. The image cars face left, so pins in the left 30% align to
-          // the pin's left edge. Pins in the right 35% align to the right edge.
-          const alignLeft = !!image && pos.left < 30;
-          const alignRight = pos.left > 65;
-          return (
-            <button
-              key={pin.number}
-              type="button"
-              data-n={pin.number}
-              aria-label={`Finding ${pin.number}: ${issue.label}`}
-              onMouseEnter={() => onActive(pin.number)}
-              onMouseLeave={() => onActive(null)}
-              onFocus={() => onActive(pin.number)}
-              onBlur={() => onActive(null)}
-              onClick={() => handlePinClick(pin.number)}
-              style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
-              className={`group absolute z-[1] inline-flex h-[26px] w-[26px] ${image ? "lg:h-[30px] lg:w-[30px]" : ""} -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 font-condensed text-sm font-bold transition-shadow before:absolute before:-inset-1 before:content-[''] hover:z-[6] hover:shadow-[0_0_0_3px_#121212] focus-visible:z-[6] focus-visible:shadow-[0_0_0_3px_#121212] focus-visible:outline-none motion-reduce:transition-none ${PIN_COLOR[pin.severity]} ${
-                isActive ? "z-[6] shadow-[0_0_0_3px_#121212]" : defaultRing ? "z-[5] shadow-[0_0_0_3px_#121212] lg:z-[1] lg:shadow-none" : ""
-              }`}
-            >
-              {pin.number}
-              <span
-                aria-hidden="true"
-                className={`pointer-events-none absolute bottom-[calc(100%+12px)] z-[9] hidden w-[236px] rounded-[10px] border border-input-border bg-white px-3 py-2.5 text-left font-sans text-[13px] font-normal leading-[1.35] text-ink shadow-[0_8px_20px_rgba(18,18,18,0.14)] lg:group-hover:block lg:group-focus-visible:block ${
-                  alignLeft ? "-left-2.5" : alignRight ? "-right-2.5" : "left-1/2 -translate-x-1/2"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className={`inline-flex h-[22px] items-center rounded px-2 font-condensed text-xs font-bold tracking-[0.08em] ${PIN_COLOR[issue.severity]}`}>
-                    {issue.severity}
-                  </span>
-                  <strong className="text-sm leading-tight">{issue.label}</strong>
-                </span>
-                <span className="mt-1.5 block font-mono text-xs text-text-2">{costLine(issue)}</span>
-                <span className="mt-1 block text-xs text-muted-text">Click to jump to the finding</span>
-              </span>
-            </button>
-          );
-        })}
+      {/* Desktop: full image with 44px of free space above for tooltips. Mobile: the front crop. */}
+      <div className="mt-2 lg:mt-11">
+        <CarImage image={image} crop="front" className="lg:hidden" loading="eager">
+          {renderPins("front")}
+        </CarImage>
+        <CarImage image={image} crop="full" className="hidden lg:block" loading="eager">
+          {renderPins("full")}
+        </CarImage>
       </div>
 
       {/* Mobile caption bar for the selected pin */}
