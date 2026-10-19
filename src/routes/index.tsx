@@ -62,7 +62,6 @@ export interface AnalysisState {
 }
 
 const STORAGE_KEY = "idle-check-history";
-const ADMIN_BYPASS_CODE = "adminsef_135";
 
 function generateReportId(): string {
   return `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -176,6 +175,8 @@ function Index() {
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
+  // Interim admin secret (phase 06): memory only, never stored, logged or left in the URL.
+  const adminSecretRef = useRef<string | null>(null);
   const pendingSaveRef = useRef<{ sessionId: string; reportId: string; reportJson: Record<string, unknown>; email?: string } | null>(null);
 
   // Bonus feature (email) must never block UX — 1 retry with a 3s delay, then just log.
@@ -205,13 +206,14 @@ function Index() {
     pendingSaveRef.current = { sessionId, reportId, reportJson, email };
     try {
       // The email travels separately from reportJson, which is publicly readable once saved.
-      const saved = await saveReport({ data: { sessionId, reportJson, email } });
+      const adminSecret = adminSecretRef.current ?? undefined;
+      const saved = await saveReport({ data: { sessionId, reportJson, email, adminSecret } });
       pendingSaveRef.current = null;
       pendingShareIdRef.current = saved.id;
       setShareId(saved.id);
       setSaveError(false);
       updateHistoryEntry(reportId, { shareId: saved.id });
-      void attemptSendEmail(sessionId, reportJson, saved.id);
+      if (!adminSecret) void attemptSendEmail(sessionId, reportJson, saved.id);
     } catch (err) {
       console.error("Save failed:", err);
       setSaveError(true);
@@ -307,7 +309,9 @@ function Index() {
     const adminCode = params.get("admin");
     const bypassReportId = params.get("report_id");
 
-    if (adminCode === ADMIN_BYPASS_CODE && bypassReportId) {
+    if (adminCode && bypassReportId) {
+      // Take the secret out of the URL at once. The server decides whether it is valid.
+      adminSecretRef.current = adminCode;
       window.history.replaceState({}, "", "/");
       const hist = loadHistory();
       const entry = hist.find((e) => e.reportId === bypassReportId);
@@ -316,7 +320,6 @@ function Index() {
         return;
       }
 
-      console.log("Admin bypass active — skipping Stripe verification");
       updateHistoryEntry(bypassReportId, { unlocked: true });
       setAnalysis({ ...entry, unlocked: true });
       setPhase("unlocking");
@@ -336,6 +339,8 @@ function Index() {
           mileage: entry.vehicle.mileage,
           askingPrice: entry.askingPrice,
           sessionId: fakeSessionId,
+          reportId: bypassReportId,
+          adminSecret: adminCode,
         },
       })
         .then(async (aiResult) => {
@@ -406,6 +411,7 @@ function Index() {
           mileage: entry.vehicle.mileage,
           askingPrice: entry.askingPrice,
           sessionId,
+          reportId,
         },
       })
         .then(async (aiResult) => {
@@ -547,7 +553,8 @@ function Index() {
         mileage: entry.vehicle.mileage,
         askingPrice: entry.askingPrice,
         sessionId,
-        forceRetry: true,
+        reportId: entry.reportId,
+        adminSecret: adminSecretRef.current ?? undefined,
       },
     })
       .then(async (aiResult) => {
@@ -574,6 +581,7 @@ function Index() {
     pendingEntryRef.current = null;
     activeSessionRef.current = null;
     pendingSaveRef.current = null;
+    adminSecretRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

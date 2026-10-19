@@ -3,6 +3,7 @@ import { z } from "zod";
 import Stripe from "stripe";
 import { Resend } from "resend";
 import type { AnalysisState } from "@/routes/index";
+import { assertPaidOrAdmin, getRedis } from "./_gate";
 
 const SEVERITY_COLOR: Record<string, string> = {
   HIGH: "#b22222",
@@ -142,6 +143,21 @@ export const sendReportEmail = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!process.env.RESEND_API_KEY || !process.env.STRIPE_SECRET_KEY) return;
 
+    // Only a paid session for this report may trigger an email (admin unlocks never send one).
+    const reportId = typeof data.reportJson.reportId === "string" ? data.reportJson.reportId : "";
+    await assertPaidOrAdmin({ sessionId: data.sessionId, reportId });
+
+    // At most one email per paid session. If Redis is down the check is skipped (still paid-only).
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const first = await redis.set(`email:sent:${data.sessionId}`, "1", { nx: true, ex: 7 * 24 * 3600 });
+        if (first === null) return;
+      } catch {
+        console.error("sendReportEmail: duplicate guard unavailable");
+      }
+    }
+
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.retrieve(data.sessionId);
     const email = session.customer_details?.email;
@@ -159,5 +175,5 @@ export const sendReportEmail = createServerFn({ method: "POST" })
       html: buildHtml(report, shareUrl),
     });
 
-    console.log("Report email sent to", email, "for", vehicle);
+    console.log("Report email sent for", vehicle);
   });

@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
-import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
+import { assertPaidOrAdmin, clientIp, getRedis } from "./_gate";
 import type { Issue, Category, Severity, Urgency } from "@/lib/ghost/types";
 
 const InputSchema = z.object({
@@ -15,7 +15,8 @@ const InputSchema = z.object({
     mileage: z.number().nullable(),
     askingPrice: z.number().optional(),
     sessionId: z.string().optional(),
-    forceRetry: z.boolean().optional(),
+    reportId: z.string().optional(),
+    adminSecret: z.string().optional(),
   }).optional(),
   listingText: z.string().optional(),
   make: z.string().optional(),
@@ -25,7 +26,8 @@ const InputSchema = z.object({
   mileage: z.number().nullable().optional(),
   askingPrice: z.number().optional(),
   sessionId: z.string().optional(),
-  forceRetry: z.boolean().optional(),
+  reportId: z.string().optional(),
+  adminSecret: z.string().optional(),
 });
 
 function sanitizeInput(text: string): string {
@@ -83,30 +85,36 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     const mileage = input?.mileage ?? null;
     const askingPrice = input?.askingPrice ?? null;
     const sessionId = input?.sessionId;
-    const forceRetry = input?.forceRetry ?? false;
+    const reportId = input?.reportId ?? "";
+    const adminSecret = input?.adminSecret;
 
-    // Rate limit: 1 call per Stripe session — prevent credit drain on repeated calls
-    // forceRetry=true bypasses the check for legitimate retries after a confirmed failure
-    if (
-      sessionId &&
-      !forceRetry &&
-      process.env.UPSTASH_REDIS_REST_URL &&
-      process.env.UPSTASH_REDIS_REST_TOKEN
-    ) {
-      const redis = new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      });
-      const ratelimit = new Ratelimit({
-        redis,
-        limiter: Ratelimit.fixedWindow(1, "24 h"),
-        prefix: "idle-check:analyze",
-      });
-      const { success } = await ratelimit.limit(sessionId);
-      if (!success) {
-        console.warn("analyzeVehicle: rate limit exceeded for session", sessionId);
-        throw new Error("Rate limit exceeded: this report has already been generated.");
+    // 1. Authorization first. Nothing below runs (and no Anthropic request is made) for an unpaid caller.
+    const { kind } = await assertPaidOrAdmin({ sessionId, reportId, adminSecret });
+
+    // 2. Abuse limits. Redis outage never bypasses step 1; it only skips the counters.
+    const redis = getRedis();
+    if (redis) {
+      try {
+        if (kind === "paid" && sessionId) {
+          // The first attempt plus one retry ("one retry at no extra charge"). A third is refused.
+          const key = `analysis:attempts:${sessionId}`;
+          const attempts = await redis.incr(key);
+          if (attempts === 1) await redis.expire(key, 7 * 24 * 3600);
+          if (attempts > 2) throw new Error("Too many attempts");
+        }
+        const ipLimit = new Ratelimit({
+          redis,
+          limiter: Ratelimit.fixedWindow(kind === "admin" ? 60 : 20, "1 h"),
+          prefix: `idle-check:analyze-ip:${kind}`,
+        });
+        const { success } = await ipLimit.limit(clientIp());
+        if (!success) throw new Error("Too many requests");
+      } catch (err) {
+        if (err instanceof Error && (err.message === "Too many attempts" || err.message === "Too many requests")) throw err;
+        console.error("analyzeVehicle: rate limit backend unavailable, counters skipped");
       }
+    } else {
+      console.error("analyzeVehicle: Redis not configured, counters skipped");
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
