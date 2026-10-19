@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
-import { CarIllustration } from "./CarIllustration";
+import { SamplePreviewCard } from "./SamplePreviewCard";
+import { VehicleCar } from "./VehicleCar";
 import { MARKETING_CONSENT_TEXT, MISSING_CAR_MAILTO, PRICE_USD } from "@/lib/ghost/constants";
 import type { AnalysisState } from "@/routes/index";
 
@@ -124,11 +125,6 @@ function timeAgo(ts: number): string {
   return `${days}d ago`;
 }
 
-// Two-seat cars get the roadster artwork on the confirmed-car card; everything else the sedan.
-function bodyFor(model: string): "roadster" | "sedan" {
-  return /(mx-?5|miata|\bz[34]\b|s2000|boxster|spider|roadster|\bslk\b)/i.test(model) ? "roadster" : "sedan";
-}
-
 function Select({
   id, value, onChange, options, placeholder, disabled, loading, selectRef,
 }: {
@@ -165,72 +161,6 @@ function Select({
         className="pointer-events-none absolute right-3 top-1/2 mt-[3px] h-4 w-4 -translate-y-1/2 text-muted-text"
       />
     </div>
-  );
-}
-
-function SamplePin({
-  label, left, top, topLg,
-}: { label: string; left: string; top: string; topLg: string }) {
-  return (
-    <span
-      className={`absolute inline-flex h-[26px] -translate-x-1/2 -translate-y-1/2 items-center whitespace-nowrap rounded-full border border-input-border bg-white px-2.5 text-[13px] font-semibold lg:h-8 lg:px-3.5 lg:text-[15px] ${left} ${top} ${topLg}`}
-    >
-      {label}
-    </span>
-  );
-}
-
-// Static marketing content. Intentionally not driven by props or state.
-// On mobile it sits in its own panel; on desktop the page band is the panel.
-function SampleCard({ className = "" }: { className?: string }) {
-  return (
-    <section
-      aria-label="Sample report"
-      className={`rounded-[18px] border border-panel-border bg-panel p-3.5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 ${className}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="inline-flex h-6 items-center rounded-full border border-panel-border bg-white px-[9px] font-condensed text-xs font-bold uppercase tracking-[0.12em] lg:h-[26px] lg:px-2.5">
-          Sample report
-        </span>
-        <span className="font-mono text-xs text-text-2 lg:text-[13px]">
-          2003 Mazda MX-5 Miata<span className="hidden lg:inline"> · 80,000 mi</span>
-        </span>
-      </div>
-
-      <div className="relative mt-1.5 aspect-[520/224] w-full lg:mt-2">
-        <CarIllustration body="roadster" className="h-full w-full" />
-        <SamplePin label="Rust check" left="left-[17.7%]" top="top-[40%]" topLg="lg:top-[32.1%]" />
-        <SamplePin label="Soft top" left="left-[42.7%]" top="top-[13%]" topLg="lg:top-[11.6%]" />
-        <SamplePin label="Timing chain" left="left-[76.9%]" top="top-[40%]" topLg="lg:top-[31.3%]" />
-      </div>
-
-      {/* Mobile stats strip */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-xl border border-panel-border bg-white px-3 py-2.5 lg:hidden">
-        <span className="inline-flex h-[22px] items-center rounded bg-sev-med px-2 font-condensed text-xs font-bold tracking-[0.08em] text-sev-med-fg">
-          NEGOTIATE
-        </span>
-        <span className="font-mono text-[13px] font-bold">$2,290–5,220 repairs</span>
-        <span className="text-[13px] text-muted-text">· 5 red flags</span>
-      </div>
-
-      {/* Desktop stats */}
-      <div className="mt-3.5 hidden grid-cols-3 overflow-hidden rounded-card-sm border border-panel-border bg-white lg:grid">
-        <div className="px-[18px] py-3.5">
-          <div className="font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-muted-text">Verdict</div>
-          <span className="mt-2 inline-flex h-6 items-center rounded bg-sev-med px-2 font-condensed text-[13px] font-bold tracking-[0.08em] text-sev-med-fg">
-            NEGOTIATE
-          </span>
-        </div>
-        <div className="border-l border-card-border px-[18px] py-3.5">
-          <div className="font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-muted-text">Repairs</div>
-          <div className="mt-2 font-mono text-[15px] font-bold">$2,290–5,220</div>
-        </div>
-        <div className="border-l border-card-border px-[18px] py-3.5">
-          <div className="font-condensed text-xs font-semibold uppercase tracking-[0.08em] text-muted-text">Red flags</div>
-          <div className="mt-1.5 font-mono text-xl font-bold">5</div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -803,7 +733,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
                   ))}
                 </ul>
               </div>
-              <SampleCard className="mt-4 lg:mt-0 lg:min-w-0 lg:flex-[1_1_560px]" />
+              <SamplePreviewCard className="mt-4 lg:mt-0 lg:min-w-0 lg:flex-[1_1_560px]" />
             </div>
           </div>
 
@@ -894,7 +824,7 @@ export function LandingView({ onSubmit, history, onLoadHistory }: LandingViewPro
             {/* Confirmed car */}
             <aside className="flex items-center gap-3 rounded-card-sm border border-card-border bg-white px-3.5 py-3 lg:block lg:min-w-[260px] lg:flex-[0_1_320px] lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
               <div className="w-[92px] shrink-0 rounded-[10px] bg-panel px-1.5 py-1 lg:w-full lg:rounded-[18px] lg:border lg:border-panel-border lg:p-[18px]">
-                <CarIllustration body={bodyFor(model)} className="h-full w-full" decorative />
+                <VehicleCar make={make} model={model} className="h-full w-full" decorative />
               </div>
               <div className="min-w-0 flex-1 lg:mt-3.5 lg:rounded-card-sm lg:border lg:border-card-border lg:bg-white lg:px-4 lg:py-3.5">
                 {decodedByVin && (

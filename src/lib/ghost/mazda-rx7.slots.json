@@ -1,0 +1,80 @@
+{
+  "_note": "Pin slots for this image. x,y are pixels in the 1366x409 coordinate system of mazda-rx7-full.png (divide by 1366 and 409 for percentages; the 1100px file has the same aspect ratio). Same assignment rule as the generic cars: sort findings (HIGH, MED, LOW), take the next free slot of the finding's category zone, no free slot means no pin.",
+  "image": "mazda-rx7.png",
+  "aspect": [
+    1366,
+    409
+  ],
+  "facing": "left",
+  "match": "/rx-?7/i on make + model, make must be Mazda",
+  "pinSizePx": {
+    "desktop": 30,
+    "mobile": 26
+  },
+  "slots": {
+    "Engine & Drivetrain": [
+      [
+        310,
+        163
+      ],
+      [
+        452,
+        168
+      ],
+      [
+        190,
+        190
+      ]
+    ],
+    "Body & Electrical": [
+      [
+        640,
+        338
+      ],
+      [
+        760,
+        260
+      ],
+      [
+        1170,
+        200
+      ]
+    ],
+    "Chassis & Suspension": [
+      [
+        282,
+        297
+      ],
+      [
+        1039,
+        297
+      ]
+    ]
+  },
+  "sampleFindings": [
+    {
+      "n": 1,
+      "severity": "HIGH",
+      "title": "Apex Seal Compression Test",
+      "chip": "Apex seals",
+      "cost": "$170–250 parts · 2 h labor",
+      "why": "Ask for a compression test printout. Each rotor should read above 8.5 bar / 120 psi."
+    },
+    {
+      "n": 2,
+      "severity": "HIGH",
+      "title": "Coolant-in-Oil / Rotor Housing Leak",
+      "chip": "Coolant in oil",
+      "cost": "$340–500 parts · 4 h labor",
+      "why": "Pull the dipstick and look for milky oil. White smoke on a cold start is the clearest warning sign."
+    },
+    {
+      "n": 3,
+      "severity": "MED",
+      "title": "Catalytic Converter Condition",
+      "chip": "Catalytic converter",
+      "cost": "$430–630 parts · 1 h labor",
+      "why": "Rotaries run rich and destroy catalytic converters. Listen for a rattle under the car at idle."
+    }
+  ]
+}

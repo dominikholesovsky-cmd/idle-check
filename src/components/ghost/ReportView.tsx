@@ -12,6 +12,7 @@ import { FindingsCar } from "./FindingsCar";
 import { FindingsList } from "./FindingsList";
 import { generateRecommendation } from "@/lib/ghost/procedural";
 import { assignPins, bodyStyleFor, computeOffer, sortFindings } from "@/lib/ghost/report";
+import { carImageFor } from "@/lib/ghost/carImages";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
 function usd(n: number): string {
@@ -100,9 +101,14 @@ export function ReportView({
   // One offer calculation for the whole report
   const { partsTotal, repairTotal, suggestedOffer } = computeOffer(checkedIssues, askingPrice || 0);
 
+  // A real drawing for this model if one is registered, otherwise the generic vector car.
+  const carImage = useMemo(
+    () => carImageFor({ make: vehicle?.make, model: vehicle?.model }),
+    [vehicle?.make, vehicle?.model],
+  );
   const pins = useMemo(
-    () => assignPins(sortedIssues, bodyStyleFor({ model: vehicle?.model ?? "" })),
-    [sortedIssues, vehicle?.model],
+    () => assignPins(sortedIssues, carImage ? carImage.slots : bodyStyleFor({ model: vehicle?.model ?? "" })),
+    [sortedIssues, carImage, vehicle?.model],
   );
 
   const safeRecommendation = useMemo(() => {
@@ -663,6 +669,7 @@ export function ReportView({
               <div className="lg:col-start-2 lg:row-start-1">
                 <FindingsCar
                   body={bodyStyleFor({ model: vehicle.model })}
+                  image={carImage}
                   pins={pins}
                   findings={sortedIssues}
                   active={activeFinding}

@@ -95,11 +95,12 @@ export interface Pin {
  * Takes findings already sorted with `sortFindings`. Each finding takes the next free slot
  * of its category zone. A finding without a free slot gets no pin and stays in the list.
  */
-export function assignPins(sortedFindings: Issue[], body: BodyStyle): Pin[] {
+export function assignPins(sortedFindings: Issue[], bodyOrSlots: BodyStyle | Slots): Pin[] {
+  const slotsByCategory = typeof bodyOrSlots === "string" ? PIN_SLOTS[bodyOrSlots] : bodyOrSlots;
   const used: Record<string, number> = {};
   const pins: Pin[] = [];
   sortedFindings.forEach((issue, i) => {
-    const slots = PIN_SLOTS[body][issue.category] ?? [];
+    const slots = slotsByCategory[issue.category] ?? [];
     const next = used[issue.category] ?? 0;
     if (next >= slots.length) return;
     used[issue.category] = next + 1;
