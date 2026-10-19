@@ -1,21 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase } from "@/lib/supabaseBrowser";
 import { ReportView } from "@/components/ghost/ReportView";
 import { Footer } from "@/components/ghost/Footer";
 import { Navbar } from "@/components/ghost/Navbar";
 import type { AnalysisState } from "@/routes/index";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
 
 export const Route = createFileRoute("/report/$id")({
   head: () => ({
     meta: [{ title: "Shared Report — Idle Check" }],
   }),
   loader: async ({ params }) => {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("reports")
       .select("report_json")
       .eq("id", params.id)

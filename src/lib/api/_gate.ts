@@ -1,16 +1,15 @@
 import Stripe from "stripe";
-import { createHash, timingSafeEqual } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { PRICE_USD } from "@/lib/ghost/constants";
+import { emailKey, isAdminEmail, verifyAccessToken } from "./_auth";
 
 // Server-only. Plain module, not a server function: it is imported by server function handlers only, so
 // it never reaches the browser bundle. Every path that spends money (Anthropic), sends email or writes a
 // report must call `assertPaidOrAdmin` before doing anything. The browser is never trusted.
 
 const DENIED_MESSAGE = "Payment required"; // generic on purpose: never reveal which check failed
-const ADMIN_FAIL_LIMIT = 5; // failed admin attempts per IP per hour
-const ADMIN_FAIL_WINDOW_S = 3600;
 
 export type GateKind = "paid" | "admin";
 
@@ -50,49 +49,41 @@ async function isPaidSession(sessionId: string, reportId: string): Promise<boole
   }
 }
 
-function sha256(value: string): Buffer {
-  return createHash("sha256").update(value).digest();
-}
+const ADMIN_CALLS_PER_HOUR = 60;
 
-/** The interim admin path is only enabled when the secret is configured, long enough, and Redis is up. */
-function adminPathEnabled(): boolean {
-  const secret = process.env.ADMIN_BYPASS_SECRET;
-  return !!secret && secret.length >= 24;
-}
-
-async function checkAdminSecret(candidate: string): Promise<boolean> {
-  const secret = process.env.ADMIN_BYPASS_SECRET;
-  if (!adminPathEnabled() || !secret) return false;
-  const redis = getRedis();
-  if (!redis) return false; // cannot rate-limit guesses, so the path stays closed
-  const ip = clientIp();
-  const failKey = `admin:fail:${ip}`;
+/** A verified admin account (ADMIN_EMAILS) passes without Stripe, at most 60 gate calls per hour per admin. */
+async function checkAdminToken(accessToken: string): Promise<boolean> {
   try {
-    const failures = Number((await redis.get<number>(failKey)) ?? 0);
-    if (failures >= ADMIN_FAIL_LIMIT) return false;
-    // Hash both sides so the comparison is constant time whatever the lengths are.
-    const ok = timingSafeEqual(sha256(candidate), sha256(secret));
-    if (!ok) {
-      const count = await redis.incr(failKey);
-      if (count === 1) await redis.expire(failKey, ADMIN_FAIL_WINDOW_S);
+    const user = await verifyAccessToken(accessToken); // fails closed without the service role key
+    if (!isAdminEmail(user.email)) return false; // fails closed without ADMIN_EMAILS
+    const redis = getRedis();
+    if (redis) {
+      const limiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.fixedWindow(ADMIN_CALLS_PER_HOUR, "1 h"),
+        prefix: "idle-check:admin-calls",
+      });
+      const { success } = await limiter.limit(emailKey(user.email));
+      if (!success) return false;
     }
-    return ok;
+    return true;
   } catch {
     return false;
   }
 }
 
 /**
- * Passes for a paid Stripe Checkout session of this report, or for the interim admin secret.
- * Anything else throws the same generic error.
+ * Passes for a paid Stripe Checkout session of this report, or for a verified admin account.
+ * Anything else throws the same generic error. A request that carries an access token is judged as an
+ * admin request only: a non-admin token never falls through to the paid path.
  */
 export async function assertPaidOrAdmin(input: {
   sessionId?: string;
   reportId: string;
-  adminSecret?: string;
+  accessToken?: string;
 }): Promise<{ kind: GateKind }> {
-  if (input.adminSecret) {
-    if (await checkAdminSecret(input.adminSecret)) return { kind: "admin" };
+  if (input.accessToken) {
+    if (await checkAdminToken(input.accessToken)) return { kind: "admin" };
     throw deniedError();
   }
   if (input.sessionId && input.reportId && (await isPaidSession(input.sessionId, input.reportId))) {

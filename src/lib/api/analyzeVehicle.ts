@@ -16,7 +16,7 @@ const InputSchema = z.object({
     askingPrice: z.number().optional(),
     sessionId: z.string().optional(),
     reportId: z.string().optional(),
-    adminSecret: z.string().optional(),
+    accessToken: z.string().optional(),
   }).optional(),
   listingText: z.string().optional(),
   make: z.string().optional(),
@@ -27,7 +27,7 @@ const InputSchema = z.object({
   askingPrice: z.number().optional(),
   sessionId: z.string().optional(),
   reportId: z.string().optional(),
-  adminSecret: z.string().optional(),
+  accessToken: z.string().optional(),
 });
 
 function sanitizeInput(text: string): string {
@@ -86,10 +86,10 @@ export const analyzeVehicle = createServerFn({ method: "POST" })
     const askingPrice = input?.askingPrice ?? null;
     const sessionId = input?.sessionId;
     const reportId = input?.reportId ?? "";
-    const adminSecret = input?.adminSecret;
+    const accessToken = input?.accessToken;
 
     // 1. Authorization first. Nothing below runs (and no Anthropic request is made) for an unpaid caller.
-    const { kind } = await assertPaidOrAdmin({ sessionId, reportId, adminSecret });
+    const { kind } = await assertPaidOrAdmin({ sessionId, reportId, accessToken });
 
     // 2. Abuse limits. Redis outage never bypasses step 1; it only skips the counters.
     const redis = getRedis();

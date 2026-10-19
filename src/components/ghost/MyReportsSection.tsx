@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, FolderOpen } from "lucide-react";
-import { useAccount } from "@/lib/account";
+import { getAccessToken, useAccount } from "@/lib/account";
+import { listMyReports, type MyReportRow } from "@/lib/api/listMyReports";
 import { PRICE_USD } from "@/lib/ghost/constants";
 import type { AnalysisState } from "@/routes/index";
 
@@ -33,6 +34,17 @@ function entryMeta(e: AnalysisState): string {
   return `${shortDate(e.timestamp)} · Asking $${e.askingPrice.toLocaleString("en-US")}`;
 }
 
+interface ListRow {
+  key: string;
+  name: string;
+  meta: string;
+  unlocked: boolean;
+  verdict: string | null;
+  ts: number;
+  actionLabel: string;
+  run: () => void;
+}
+
 function StatusPill({ unlocked }: { unlocked: boolean }) {
   return unlocked ? (
     <span className={`${PILL} bg-success-bg text-success`}>FULL REPORT</span>
@@ -58,14 +70,38 @@ export function MyReportsSection({
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
 
+  // Server-saved (paid) reports for the signed-in email. Previews and unsaved reports come from this device.
+  const [saved, setSaved] = useState<MyReportRow[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const signedIn = account.status === "signed-in";
+  useEffect(() => {
+    if (!signedIn) {
+      setSaved(null);
+      setLoadFailed(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) throw new Error("no session");
+        const rows = await listMyReports({ data: { accessToken } });
+        if (!cancelled) { setSaved(rows); setLoadFailed(false); }
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [signedIn, account.email]);
+
   const send = async (address: string) => {
     setError(null);
     setSending(true);
     try {
       await account.requestLink(address);
       if (mounted.current) setSentTo(address);
-    } catch {
-      if (mounted.current) setError(RATE_LIMIT_MESSAGE);
+    } catch (err) {
+      if (mounted.current) setError(err instanceof Error ? err.message : RATE_LIMIT_MESSAGE);
     } finally {
       if (mounted.current) setSending(false);
     }
@@ -87,6 +123,34 @@ export function MyReportsSection({
   // 3. Signed in: the list
   if (account.status === "signed-in") {
     const initial = (account.email ?? "?").charAt(0).toUpperCase();
+    const savedIds = new Set((saved ?? []).map((r) => r.id));
+    const rows: ListRow[] = [
+      ...(saved ?? []).map((r): ListRow => ({
+        key: `s-${r.id}`,
+        name: r.vehicleLabel,
+        meta: `${r.mileage ? `${r.mileage.toLocaleString("en-US")} mi · ` : ""}${r.askingPrice != null ? `Asking $${r.askingPrice.toLocaleString("en-US")}` : ""}`.replace(/ · $/, ""),
+        unlocked: true,
+        verdict: r.verdict,
+        ts: new Date(r.createdAt).getTime(),
+        actionLabel: "Open",
+        run: () => { window.location.assign(`/report/${r.id}?from=my-reports`); },
+      })),
+      ...history
+        .filter((e) => !e.unlocked || !e.shareId || !savedIds.has(e.shareId))
+        .map((e): ListRow => ({
+          key: `l-${e.reportId}`,
+          name: vehicleName(e),
+          meta: e.unlocked
+            ? `${e.vehicle.mileage ? `${e.vehicle.mileage.toLocaleString("en-US")} mi · ` : ""}Asking $${e.askingPrice.toLocaleString("en-US")}`
+            : "3 free findings · not unlocked",
+          unlocked: e.unlocked,
+          verdict: e.unlocked ? (e.recommendation?.verdict ?? null) : null,
+          ts: e.timestamp,
+          actionLabel: e.unlocked ? "Open" : `Unlock $${PRICE_USD.toFixed(2)}`,
+          run: () => onOpen(e),
+        })),
+    ].sort((a, b) => b.ts - a.ts);
+
     return (
       <section id="my-reports" aria-label="Your reports" className={`${card} mt-4 scroll-mt-20 lg:mt-6`}>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
@@ -96,7 +160,7 @@ export function MyReportsSection({
             </span>
             <h2 className="text-[21px] font-bold">Your reports</h2>
             <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-chip px-2 font-mono text-[13px] font-bold">
-              {entries.length}
+              {rows.length}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -111,33 +175,34 @@ export function MyReportsSection({
             </button>
           </div>
         </div>
-        {entries.length === 0 ? (
+        {loadFailed && (
+          <p role="alert" className="mt-3 text-[13px] font-semibold text-primary-ink">
+            Could not load your saved reports. Reload the page to try again.
+          </p>
+        )}
+        {rows.length === 0 && saved !== null ? (
           <p className="mt-4 text-[15px] text-muted-text">No reports yet. Run a check above and it will show up here.</p>
         ) : (
           <ul className="mt-3">
-            {entries.map((entry) => {
-              const verdict = entry.unlocked ? VERDICT_PILL[entry.recommendation?.verdict ?? ""] : undefined;
+            {rows.map((row) => {
+              const verdict = row.unlocked && row.verdict ? VERDICT_PILL[row.verdict] : undefined;
               return (
                 <li
-                  key={entry.reportId}
+                  key={row.key}
                   className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card-border py-2.5 lg:flex-nowrap"
                 >
                   <div className="min-w-0 basis-full lg:basis-auto lg:flex-1">
-                    <div className="text-base font-semibold">{vehicleName(entry)}</div>
-                    <div className="font-mono text-xs text-muted-text">
-                      {entry.unlocked
-                        ? `${entry.vehicle.mileage ? `${entry.vehicle.mileage.toLocaleString("en-US")} mi · ` : ""}Asking $${entry.askingPrice.toLocaleString("en-US")}`
-                        : "3 free findings · not unlocked"}
-                    </div>
+                    <div className="text-base font-semibold">{row.name}</div>
+                    <div className="font-mono text-xs text-muted-text">{row.meta}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatusPill unlocked={entry.unlocked} />
+                    <StatusPill unlocked={row.unlocked} />
                     {verdict && <span className={`${PILL} ${verdict.className}`}>{verdict.label}</span>}
                   </div>
-                  <span className="font-mono text-xs text-muted-text">{shortDate(entry.timestamp)}</span>
+                  <span className="font-mono text-xs text-muted-text">{shortDate(row.ts)}</span>
                   <div className="ml-auto">
-                    <button type="button" onClick={() => onOpen(entry)} className={ROW_LINK}>
-                      {entry.unlocked ? "Open" : `Unlock $${PRICE_USD.toFixed(2)}`}
+                    <button type="button" onClick={row.run} className={ROW_LINK}>
+                      {row.actionLabel}
                     </button>
                   </div>
                 </li>

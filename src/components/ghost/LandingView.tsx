@@ -1,22 +1,13 @@
 import { useState, useEffect, useRef, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ChevronDown } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
 import { SamplePreviewCard } from "./SamplePreviewCard";
 import { CarImage } from "./CarImage";
 import { MyReportsSection } from "./MyReportsSection";
+import { getSupabase } from "@/lib/supabaseBrowser";
 import { MARKETING_CONSENT_TEXT, MISSING_CAR_MAILTO, PRICE_USD } from "@/lib/ghost/constants";
 import type { AnalysisState } from "@/routes/index";
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  {
-    global: {
-      fetch: (url, options) =>
-        fetch(url, { ...options, signal: AbortSignal.timeout(10000) }),
-    },
-  }
-);
+const supabase = { from: (table: string) => getSupabase().from(table) };
 
 export interface LandingSubmit {
   manualText: string;

@@ -18,7 +18,7 @@ import { MARKETING_CONSENT_TEXT } from "@/lib/ghost/constants";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import { loadReportBySession } from "@/lib/api/loadReportBySession";
 import { toPublicReportJson } from "@/lib/ghost/publicReport";
-import { useAccount } from "@/lib/account";
+import { getAccessToken, useAccount } from "@/lib/account";
 import {
   detectMarketplace, generateIssues, generateRecalls,
   generateRecommendation, parseVehicle,
@@ -63,6 +63,11 @@ export interface AnalysisState {
 }
 
 const STORAGE_KEY = "idle-check-history";
+
+/** Fake session ids of admin unlocks. Only a hint for the client; the server checks the token. */
+function isAdminSession(sessionId: string): boolean {
+  return sessionId.startsWith("admin-");
+}
 
 function generateReportId(): string {
   return `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -177,8 +182,6 @@ function Index() {
   const pendingEntryRef = useRef<AnalysisState | null>(null);
   const activeSessionRef = useRef<{ sessionId: string; entry: AnalysisState } | null>(null);
   const pendingShareIdRef = useRef<string | null>(null);
-  // Interim admin secret (phase 06): memory only, never stored, logged or left in the URL.
-  const adminSecretRef = useRef<string | null>(null);
   const pendingSaveRef = useRef<{ sessionId: string; reportId: string; reportJson: Record<string, unknown>; email?: string } | null>(null);
 
   // Bonus feature (email) must never block UX — 1 retry with a 3s delay, then just log.
@@ -208,14 +211,16 @@ function Index() {
     pendingSaveRef.current = { sessionId, reportId, reportJson, email };
     try {
       // The email travels separately from reportJson, which is publicly readable once saved.
-      const adminSecret = adminSecretRef.current ?? undefined;
-      const saved = await saveReport({ data: { sessionId, reportJson, email, adminSecret } });
+      // Admin unlocks carry the signed-in admin's token, fetched fresh; the server verifies it.
+      const isAdminRun = isAdminSession(sessionId);
+      const accessToken = isAdminRun ? ((await getAccessToken()) ?? undefined) : undefined;
+      const saved = await saveReport({ data: { sessionId, reportJson, email, accessToken } });
       pendingSaveRef.current = null;
       pendingShareIdRef.current = saved.id;
       setShareId(saved.id);
       setSaveError(false);
       updateHistoryEntry(reportId, { shareId: saved.id });
-      if (!adminSecret) void attemptSendEmail(sessionId, reportJson, saved.id);
+      if (!isAdminRun) void attemptSendEmail(sessionId, reportJson, saved.id);
     } catch (err) {
       console.error("Save failed:", err);
       setSaveError(true);
@@ -314,55 +319,6 @@ function Index() {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     const reportId = params.get("report_id");
-
-    const adminCode = params.get("admin");
-    const bypassReportId = params.get("report_id");
-
-    if (adminCode && bypassReportId) {
-      // Take the secret out of the URL at once. The server decides whether it is valid.
-      adminSecretRef.current = adminCode;
-      window.history.replaceState({}, "", "/");
-      const hist = loadHistory();
-      const entry = hist.find((e) => e.reportId === bypassReportId);
-      if (!entry) {
-        console.error("Admin bypass: entry not found:", bypassReportId);
-        return;
-      }
-
-      updateHistoryEntry(bypassReportId, { unlocked: true });
-      setAnalysis({ ...entry, unlocked: true });
-      setPhase("unlocking");
-      setClaudeError(false);
-      window.scrollTo({ top: 0 });
-
-      const fakeSessionId = `admin-bypass-${Date.now()}`;
-      activeSessionRef.current = { sessionId: fakeSessionId, entry };
-
-      const promise = analyzeVehicle({
-        data: {
-          listingText: entry.listingText ?? "",
-          make: entry.vehicle.make,
-          model: entry.vehicle.model,
-          year: entry.vehicle.year,
-          engineType: entry.engineType,
-          mileage: entry.vehicle.mileage,
-          askingPrice: entry.askingPrice,
-          sessionId: fakeSessionId,
-          reportId: bypassReportId,
-          adminSecret: adminCode,
-        },
-      })
-        .then(async (aiResult) => {
-          await handleSuccessfulAnalysis(entry, fakeSessionId, bypassReportId, aiResult);
-        })
-        .catch((err) => {
-          console.error("Admin bypass Claude error:", err);
-          setClaudeError(true);
-        });
-
-      setClaudePromise(promise);
-      return;
-    }
 
     if (!sessionId || !reportId) return;
 
@@ -552,6 +508,53 @@ function Index() {
     setClaudeError(false);
     setRetryCount((c) => c + 1);
 
+    const promise = (async () => {
+      const accessToken = isAdminSession(sessionId) ? ((await getAccessToken()) ?? undefined) : undefined;
+      return analyzeVehicle({
+        data: {
+          listingText: entry.listingText ?? "",
+          make: entry.vehicle.make,
+          model: entry.vehicle.model,
+          year: entry.vehicle.year,
+          engineType: entry.engineType,
+          mileage: entry.vehicle.mileage,
+          askingPrice: entry.askingPrice,
+          sessionId,
+          reportId: entry.reportId,
+          accessToken,
+        },
+      });
+    })()
+      .then(async (aiResult) => {
+        await handleSuccessfulAnalysis(entry, sessionId, entry.reportId, aiResult);
+      })
+      .catch((err) => {
+        console.error("Retry failed:", err);
+        setClaudeError(true);
+      });
+
+    setClaudePromise(promise);
+  };
+
+  // Admin unlock: the normal post-payment flow with a fake session id and the admin's access token.
+  // The server verifies the token against ADMIN_EMAILS; this button is only shown to verified admins.
+  const handleAdminUnlock = async () => {
+    if (!analysis) return;
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setAnalyzeError("Please sign in again.");
+      return;
+    }
+    const entry = analysis;
+    const sessionId = `admin-${crypto.randomUUID()}`;
+    setAnalyzeError(null);
+    updateHistoryEntry(entry.reportId, { unlocked: true });
+    setAnalysis({ ...entry, unlocked: true });
+    setPhase("unlocking");
+    setClaudeError(false);
+    window.scrollTo({ top: 0 });
+    activeSessionRef.current = { sessionId, entry };
+
     const promise = analyzeVehicle({
       data: {
         listingText: entry.listingText ?? "",
@@ -563,17 +566,16 @@ function Index() {
         askingPrice: entry.askingPrice,
         sessionId,
         reportId: entry.reportId,
-        adminSecret: adminSecretRef.current ?? undefined,
+        accessToken,
       },
     })
       .then(async (aiResult) => {
         await handleSuccessfulAnalysis(entry, sessionId, entry.reportId, aiResult);
       })
       .catch((err) => {
-        console.error("Retry failed:", err);
+        console.error("Admin unlock failed:", err);
         setClaudeError(true);
       });
-
     setClaudePromise(promise);
   };
 
@@ -601,7 +603,6 @@ function Index() {
     pendingEntryRef.current = null;
     activeSessionRef.current = null;
     pendingSaveRef.current = null;
-    adminSecretRef.current = null;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -653,6 +654,7 @@ function Index() {
             marketplace={analysis.marketplace}
             isAdmin={account.isAdmin}
             adminEmail={account.email}
+            onAdminUnlock={account.isAdmin ? handleAdminUnlock : undefined}
             onSignOut={() => void account.signOut()}
           />
         )}
