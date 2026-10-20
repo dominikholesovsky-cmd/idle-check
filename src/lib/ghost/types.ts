@@ -55,4 +55,6 @@ export interface ReportRecommendation {
   headline: string;
   summary: string;
   roadmap: RoadmapItem[];
+  /** The Idle Score this text was written for. When it differs from the report's score, the text is regenerated. */
+  score?: number;
 }

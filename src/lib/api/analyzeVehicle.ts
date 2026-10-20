@@ -165,7 +165,8 @@ Return this exact JSON:
   "marketValueHigh": number|null
 }
 
-marketValueLow/marketValueHigh: typical fair USD market range for this car at this mileage, or null if unsure.
+marketValueLow/marketValueHigh: USD numbers for the typical fair market range of this exact car (year, model, engine) at this mileage in the US market. They drive 25% of the deal score, so give them whenever you can. Use null for both only if you are truly unsure.
+sellerRedFlags: short plain sentences, one problem each. If the listing shows a serious problem, name it plainly with the usual word, for example salvage or rebuilt title, odometer or mileage discrepancy, flood damage, frame damage, lien, no title, escrow, wire transfer. Do not soften or paraphrase such problems.
 
 Rules: exactly 5 issues. Model-specific. costMin=partsCostMin+(labourHours*120). HIGH=$500+. MED=$150-500. LOW=under $150.${hasListing ? " Prioritize issues hinted in listing." : ""}`;
 

@@ -18,6 +18,8 @@ import { MARKETING_CONSENT_TEXT } from "@/lib/ghost/constants";
 import { sendReportEmail } from "@/lib/api/sendReportEmail";
 import { loadReportBySession } from "@/lib/api/loadReportBySession";
 import { toPublicReportJson } from "@/lib/ghost/publicReport";
+import { computeScore, type ScoreResult } from "@/lib/ghost/scoring";
+import { buildScoreInput, isCurrentScore } from "@/lib/ghost/scoreInput";
 import { getAccessToken, useAccount } from "@/lib/account";
 import {
   detectMarketplace, generateIssues, generateRecalls,
@@ -60,6 +62,8 @@ export interface AnalysisState {
   marketingOptIn?: boolean;
   /** Set only in the public report JSON. */
   savedToEmail?: boolean;
+  /** Idle Score (no personal data). Recomputed from the stored fields when missing or older than SCORE_VERSION. */
+  score?: ScoreResult;
 }
 
 const STORAGE_KEY = "idle-check-history";
@@ -77,7 +81,7 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!entry || !entry.vehicle) return null;
   if (!entry.recommendation || !entry.recommendation.verdict) {
     try {
-      entry.recommendation = generateRecommendation(entry.vehicle, entry.issues || [], entry.askingPrice || 0);
+      entry.recommendation = generateRecommendation(entry.vehicle, entry.issues || [], entry.askingPrice || 0, entry);
     } catch {
       entry.recommendation = { verdict: "negotiate", headline: "Review Needed", summary: "Please regenerate this report.", roadmap: [] };
     }
@@ -86,6 +90,14 @@ function validateAndMigrateEntry(entry: any): AnalysisState | null {
   if (!Array.isArray(entry.recalls)) entry.recalls = [];
   if (!entry.reportId) entry.reportId = generateReportId();
   if (entry.unlocked === undefined) entry.unlocked = true;
+  // An old unlocked report without a (current) score gets one from its stored fields. Previews never get one.
+  if (entry.unlocked && !isCurrentScore(entry.score)) {
+    try {
+      entry.score = computeScore(buildScoreInput(entry));
+    } catch {
+      delete entry.score;
+    }
+  }
   if (Array.isArray(entry.recalls)) {
     entry.recalls = entry.recalls.map((r: any) => ({
       ...r,
@@ -248,11 +260,6 @@ function Index() {
     },
   ) => {
     if (aiResult.issues.length > 0) {
-      const newRecommendation = generateRecommendation(
-        entry.vehicle,
-        aiResult.issues,
-        entry.askingPrice
-      );
       const upgraded: AnalysisState = {
         ...entry,
         unlocked: true,
@@ -261,8 +268,12 @@ function Index() {
         marketValueNote: aiResult.marketValueNote,
         marketValueLow: aiResult.marketValueLow,
         marketValueHigh: aiResult.marketValueHigh,
-        recommendation: newRecommendation,
       };
+      // The score is computed here, after payment, from the AI findings. The verdict text is built from it.
+      const score = computeScore(buildScoreInput(upgraded));
+      const newRecommendation = generateRecommendation(entry.vehicle, aiResult.issues, entry.askingPrice, { ...upgraded, score });
+      upgraded.score = score;
+      upgraded.recommendation = newRecommendation;
       setAnalysis(upgraded);
       updateHistoryEntry(reportId, {
         unlocked: true,
@@ -272,6 +283,7 @@ function Index() {
         marketValueLow: aiResult.marketValueLow,
         marketValueHigh: aiResult.marketValueHigh,
         recommendation: newRecommendation,
+        score,
       });
       // The saved JSON is publicly readable, so it never carries the email.
       await attemptSaveAndEmail(sessionId, reportId, toPublicReportJson(upgraded) as unknown as Record<string, unknown>, entry.email);
@@ -447,7 +459,7 @@ function Index() {
       }
 
       const issues = generateIssues(vehicle);
-      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
+      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice, { recalls, recallSource, listingText: data.manualText });
 
       pendingEntryRef.current = {
         vehicle, marketplace, askingPrice: data.askingPrice,
@@ -464,7 +476,7 @@ function Index() {
       console.error("Analysis failed:", err);
       const issues = generateIssues(vehicle);
       const recalls = generateRecalls(vehicle);
-      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice);
+      const recommendation = generateRecommendation(vehicle, issues, data.askingPrice, { recalls, recallSource: "procedural", listingText: data.manualText });
 
       pendingEntryRef.current = {
         vehicle, marketplace, askingPrice: data.askingPrice,
@@ -695,6 +707,8 @@ function Index() {
             marketValueLow={analysis.marketValueLow}
             marketValueHigh={analysis.marketValueHigh}
             recallSource={analysis.recallSource}
+            score={analysis.score}
+            listingText={analysis.listingText}
             onNewReport={goHome}
             shareId={shareId ?? undefined}
             isDemo={isDemo}

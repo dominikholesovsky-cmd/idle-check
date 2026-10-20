@@ -1,3 +1,5 @@
+import { ensureScore, type ScoreSource } from "./scoreInput";
+import type { Band } from "./scoring";
 import type { Category, Issue, Recall, ReportRecommendation, RoadmapItem, Severity, Urgency, Vehicle } from "./types";
 
 const MARKETPLACES = [
@@ -454,44 +456,44 @@ export function generateIssues(vehicle: Vehicle): Issue[] {
 
 // ─── Recommendation & Roadmap ─────────────────────────────────────────────────
 
+const BAND_HEADLINE: Record<Band, string> = {
+  excellent: "Excellent Deal: Buy With Confidence",
+  good: "Good Deal: Worth Buying",
+  fair: "Fair Deal: Negotiate on Price",
+  weak: "Weak Deal: Negotiate Hard or Walk Away",
+  poor: "Poor Deal: Walk Away",
+};
+
+/** Everything besides vehicle, issues and price that the Idle Score reads. All optional. */
+export type RecommendationContext = Omit<ScoreSource, "vehicle" | "askingPrice" | "issues">;
+
+/**
+ * The verdict, headline and summary come from the Idle Score, so they can never disagree with it.
+ * Pass an existing `score` to reuse it; otherwise it is computed from the arguments.
+ */
 export function generateRecommendation(
   vehicle: Vehicle,
   issues: Issue[] = [],
   askingPrice: number,
+  context: RecommendationContext = {},
 ): ReportRecommendation {
   try {
     const validIssues = Array.isArray(issues) ? issues : [];
-    const safeAskingPrice = askingPrice && askingPrice > 0 ? askingPrice : 1;
 
-    const highCount = validIssues.filter((i) => i.severity === "HIGH").length;
     const immediate = validIssues.filter((i) => i.urgency === "Immediate");
     const soon = validIssues.filter((i) => i.urgency === "Soon");
     const monitor = validIssues.filter((i) => i.urgency === "Monitor");
 
-    const totalPartsMin = validIssues.reduce((s, i) => s + (i.partsCostMin || 0), 0);
-    const totalMin = validIssues.reduce((s, i) => s + (i.costMin || 0), 0);
-    const totalMax = validIssues.reduce((s, i) => s + (i.costMax || 0), 0);
-    const repairRatio = totalMin / safeAskingPrice;
-
     const v = `${vehicle?.year ?? ""} ${vehicle?.make ?? ""} ${vehicle?.model ?? ""}`.trim() || "Vehicle";
 
-    let verdict: "buy" | "negotiate" | "walkaway";
-    let headline: string;
-    let summary: string;
-
-    if (highCount >= 3 || repairRatio > 0.6) {
-      verdict = "walkaway";
-      headline = "Walk Away — Unless the Price Drops Significantly";
-      summary = `The ${v} has ${highCount} high-severity issues and an estimated repair bill of $${totalMin.toLocaleString()}+ — that's ${Math.round(repairRatio * 100)}% of the asking price. At this ratio, you're buying someone else's problem. If the seller won't move to reflect these costs, there are better cars out there for this budget.`;
-    } else if (highCount >= 1 || repairRatio > 0.25) {
-      verdict = "negotiate";
-      headline = "Negotiate Hard — Real Issues Found";
-      summary = `The ${v} has ${highCount > 0 ? `${highCount} high-priority item${highCount > 1 ? "s" : ""}` : "several medium-priority items"} that need attention. The estimated repair cost of $${totalMin.toLocaleString()}–$${totalPartsMin === 0 ? "–" : totalMax.toLocaleString()} gives you real leverage in negotiation. Use the script below to open at a lower number — this car has work ahead of it.`;
-    } else {
-      verdict = "buy";
-      headline = "Solid Buy — Mostly Routine Maintenance";
-      summary = `The ${v} looks like a reasonable purchase at this price point. The flagged items are mostly routine wear — expected on any used car at this age and mileage. Have a trusted mechanic do a pre-purchase inspection to confirm, then make your offer with confidence.`;
-    }
+    const score = ensureScore({ ...context, vehicle, askingPrice, issues: validIssues });
+    const verdict = score.verdict;
+    const headline = BAND_HEADLINE[score.band];
+    const top = score.drivers.slice(0, 2).map((d) => d.label);
+    let summary = `This ${v} scores ${score.score} out of 100.`;
+    if (top.length === 2) summary += ` The biggest reasons are ${top[0]} and ${top[1]}.`;
+    else if (top.length === 1) summary += ` The biggest reason is ${top[0]}.`;
+    if (score.cap) summary += ` ${score.cap.reason}`;
 
     const roadmap: any[] = [];
 
@@ -525,6 +527,7 @@ export function generateRecommendation(
       headline,
       summary,
       roadmap,
+      score: score.score,
     };
 
   } catch (error) {

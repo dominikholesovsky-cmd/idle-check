@@ -2,11 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { serviceClient } from "./_supabaseAdmin";
 import { verifyAccessToken } from "./_auth";
+import { computeScore, type Band } from "@/lib/ghost/scoring";
+import { buildScoreInput, isCurrentScore, type ScoreSource } from "@/lib/ghost/scoreInput";
 
 interface ReportJsonShape {
   vehicle?: { year?: unknown; make?: unknown; model?: unknown; mileage?: unknown };
   askingPrice?: unknown;
   recommendation?: { verdict?: unknown };
+  score?: unknown;
 }
 
 export interface MyReportRow {
@@ -16,6 +19,9 @@ export interface MyReportRow {
   mileage: number | null;
   askingPrice: number | null;
   verdict: "buy" | "negotiate" | "walkaway" | null;
+  /** Idle Score 0 to 100, or null when it cannot be computed. */
+  score: number | null;
+  band: Band | null;
 }
 
 // The signed-in user's saved reports: leads (by verified email) -> report_owners -> reports.
@@ -54,7 +60,22 @@ export const listMyReports = createServerFn({ method: "POST" })
     return (rows ?? []).map((row) => {
       const json = (row.report_json ?? {}) as ReportJsonShape;
       const v = json.vehicle ?? {};
-      const verdict = json.recommendation?.verdict;
+      // The stored score, or one recomputed from the stored fields (old reports). The verdict follows the score.
+      let score: number | null = null;
+      let band: Band | null = null;
+      let scoreVerdict: MyReportRow["verdict"] = null;
+      try {
+        const stored = json.score;
+        const result = isCurrentScore(stored)
+          ? stored
+          : computeScore(buildScoreInput(json as unknown as ScoreSource));
+        score = result.score;
+        band = result.band;
+        scoreVerdict = result.verdict;
+      } catch {
+        // No score for this row; the list shows a dash.
+      }
+      const verdict = scoreVerdict ?? json.recommendation?.verdict;
       return {
         id: String(row.id),
         createdAt: String(row.created_at),
@@ -62,6 +83,8 @@ export const listMyReports = createServerFn({ method: "POST" })
         mileage: typeof v.mileage === "number" ? v.mileage : null,
         askingPrice: typeof json.askingPrice === "number" ? json.askingPrice : null,
         verdict: verdict === "buy" || verdict === "negotiate" || verdict === "walkaway" ? verdict : null,
+        score,
+        band,
       };
     });
   });

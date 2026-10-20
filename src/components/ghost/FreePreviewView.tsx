@@ -28,8 +28,8 @@ const ADDS: { title: string; body: string; icon: ReactNode }[] = [
     ),
   },
   {
-    title: "Verdict, market value, recalls",
-    body: "Buy, negotiate or walk away, plus a price check and open NHTSA recalls.",
+    title: "Idle Score, verdict, market value, recalls",
+    body: "A 0 to 100 deal score, buy, negotiate or walk away, a price check and open NHTSA recalls.",
     icon: (
       <>
         <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />
@@ -57,7 +57,7 @@ const ADDS: { title: string; body: string; icon: ReactNode }[] = [
 
 const PANEL_BULLETS = [
   "Findings with cost ranges and part numbers",
-  "Seller red flags, verdict and market value",
+  "Idle Score, seller red flags and market value",
   "Negotiation script, PDF and shareable link",
 ];
 
@@ -339,7 +339,7 @@ export function FreePreviewView({
                 ${askingPrice.toLocaleString("en-US")}
               </dd>
             </div>
-            {["Verdict", "Repairs"].map((label) => (
+            {["Score", "Repairs"].map((label) => (
               <div key={label} className="lg:border-l lg:border-card-border lg:px-5 lg:py-[18px]">
                 <dt className="font-condensed text-xs font-semibold uppercase tracking-[0.1em] text-muted-text lg:text-[13px]">{label}</dt>
                 <dd className="mt-1.5 flex items-center gap-1.5 text-[15px] font-semibold text-text-2 lg:mt-2 lg:text-base">

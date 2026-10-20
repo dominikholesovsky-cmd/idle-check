@@ -27,6 +27,7 @@ export function FindingsList({
   active,
   onActive,
   jump,
+  impacts,
 }: {
   findings: Issue[];
   checked: Set<string>;
@@ -36,6 +37,8 @@ export function FindingsList({
   onActive: (n: number | null) => void;
   /** Ask the list to scroll to a finding, expand it and focus it. */
   jump: { n: number; nonce: number } | null;
+  /** Idle Score points each finding costs, by issue id. Chips show from 0.5 points up. */
+  impacts?: Record<string, number>;
 }) {
   const uid = useId();
   const key = findings.map((f) => f.id).join("|");
@@ -132,6 +135,11 @@ export function FindingsList({
                     <span className="text-xs uppercase tracking-[0.06em] text-muted-text">
                       {URGENCY_LABEL[issue.urgency] ?? URGENCY_LABEL.Monitor}
                     </span>
+                    {(impacts?.[issue.id] ?? 0) >= 0.5 && (
+                      <span className="inline-flex h-[22px] items-center rounded-full border border-card-border bg-white px-2 font-mono text-xs font-bold text-primary">
+                        −{Math.round(impacts![issue.id])} pts
+                      </span>
+                    )}
                   </div>
                   <label
                     htmlFor={boxId}

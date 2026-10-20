@@ -3,6 +3,7 @@ import { Check, FolderOpen } from "lucide-react";
 import { getAccessToken, useAccount } from "@/lib/account";
 import { listMyReports, type MyReportRow } from "@/lib/api/listMyReports";
 import { PRICE_USD } from "@/lib/ghost/constants";
+import { BAND_COLORS, type Band } from "@/lib/ghost/scoring";
 import type { AnalysisState } from "@/routes/index";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,8 +42,36 @@ interface ListRow {
   unlocked: boolean;
   verdict: string | null;
   ts: number;
+  score: number | null;
+  band: Band | null;
   actionLabel: string;
   run: () => void;
+}
+
+// 44 px badge: a ring in the band colour with the number, or a dashed dash when there is no score yet.
+function ScoreBadge({ score, band }: { score: number | null; band: Band | null }) {
+  if (score === null || band === null) {
+    return (
+      <span
+        role="img"
+        aria-label="No score yet"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-input-border font-mono text-sm font-bold text-muted-text"
+      >
+        –
+      </span>
+    );
+  }
+  const color = BAND_COLORS[band].bg;
+  return (
+    <span
+      role="img"
+      aria-label={`Idle Score ${score} out of 100`}
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-mono text-base font-bold"
+      style={{ border: `4px solid ${color}` }}
+    >
+      {score}
+    </span>
+  );
 }
 
 function StatusPill({ unlocked }: { unlocked: boolean }) {
@@ -132,6 +161,8 @@ export function MyReportsSection({
         unlocked: true,
         verdict: r.verdict,
         ts: new Date(r.createdAt).getTime(),
+        score: r.score,
+        band: r.band,
         actionLabel: "Open",
         run: () => { window.location.assign(`/report/${r.id}?from=my-reports`); },
       })),
@@ -144,8 +175,10 @@ export function MyReportsSection({
             ? `${e.vehicle.mileage ? `${e.vehicle.mileage.toLocaleString("en-US")} mi · ` : ""}Asking $${e.askingPrice.toLocaleString("en-US")}`
             : "3 free findings · not unlocked",
           unlocked: e.unlocked,
-          verdict: e.unlocked ? (e.recommendation?.verdict ?? null) : null,
+          verdict: e.unlocked ? (e.score?.verdict ?? e.recommendation?.verdict ?? null) : null,
           ts: e.timestamp,
+          score: e.unlocked && e.score ? e.score.score : null,
+          band: e.unlocked && e.score ? e.score.band : null,
           actionLabel: e.unlocked ? "Open" : `Unlock $${PRICE_USD.toFixed(2)}`,
           run: () => onOpen(e),
         })),
@@ -191,7 +224,8 @@ export function MyReportsSection({
                   key={row.key}
                   className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card-border py-2.5 lg:flex-nowrap"
                 >
-                  <div className="min-w-0 basis-full lg:basis-auto lg:flex-1">
+                  <ScoreBadge score={row.score} band={row.band} />
+                  <div className="min-w-0 flex-1">
                     <div className="text-base font-semibold">{row.name}</div>
                     <div className="font-mono text-xs text-muted-text">{row.meta}</div>
                   </div>

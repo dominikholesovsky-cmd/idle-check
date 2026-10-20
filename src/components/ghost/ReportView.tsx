@@ -7,12 +7,15 @@ import { RepairCostTracker } from "./RepairCostTracker";
 import { NegotiationScript, CopyMessageButton, buildNegotiationScript } from "./NegotiationScript";
 import { RecallSection } from "./RecallSection";
 import { RecommendationCard } from "./RecommendationCard";
+import { ScoreCard } from "./ScoreCard";
 import { PriceRuler } from "./PriceRuler";
 import { FindingsCar } from "./FindingsCar";
 import { FindingsList } from "./FindingsList";
 import { generateRecommendation } from "@/lib/ghost/procedural";
 import { assignPins, computeOffer, sortFindings } from "@/lib/ghost/report";
 import { carImageFor } from "@/lib/ghost/carImages";
+import { computeScore, scoreAtPrice, type ScoreResult } from "@/lib/ghost/scoring";
+import { buildScoreInput, isCurrentScore } from "@/lib/ghost/scoreInput";
 import type { Issue, Recall, ReportRecommendation, Vehicle } from "@/lib/ghost/types";
 
 function usd(n: number): string {
@@ -30,7 +33,7 @@ const ACTION_BTN =
 export function ReportView({
   vehicle, marketplace, askingPrice, issues = [], recalls = [],
   recommendation, onNewReport,
-  sellerRedFlags, marketValueNote, marketValueLow, marketValueHigh, recallSource,
+  sellerRedFlags, marketValueNote, marketValueLow, marketValueHigh, recallSource, score: storedScore, listingText,
   shareId, isSharedView, isDemo, saveError, onRetrySave, savedToEmail,
 }: {
   vehicle: Vehicle;
@@ -45,6 +48,9 @@ export function ReportView({
   marketValueLow?: number;
   marketValueHigh?: number;
   recallSource?: "vin" | "nhtsa" | "procedural" | "none";
+  /** Stored Idle Score. Recomputed from the other props when missing or older than SCORE_VERSION. */
+  score?: ScoreResult;
+  listingText?: string;
   shareId?: string;
   isSharedView?: boolean;
   isDemo?: boolean;
@@ -111,10 +117,34 @@ export function ReportView({
     [sortedIssues, carImage],
   );
 
+  // The Idle Score depends on the report data only, never on the ticked findings.
+  const scoreInput = useMemo(
+    () =>
+      buildScoreInput({
+        vehicle, askingPrice, issues, recalls, recallSource, sellerRedFlags, listingText, marketValueLow, marketValueHigh,
+      }),
+    [vehicle, askingPrice, issues, recalls, recallSource, sellerRedFlags, listingText, marketValueLow, marketValueHigh],
+  );
+  const score = useMemo(
+    () => (isCurrentScore(storedScore) ? storedScore : computeScore(scoreInput)),
+    [storedScore, scoreInput],
+  );
+  // What the score would be at the suggested offer. Moves with the ticked findings.
+  const atOffer = useMemo(
+    () =>
+      suggestedOffer > 0 && askingPrice > 0 && suggestedOffer < askingPrice
+        ? { price: suggestedOffer, result: scoreAtPrice(scoreInput, suggestedOffer) }
+        : null,
+    [scoreInput, suggestedOffer, askingPrice],
+  );
+
+  // The verdict text is written from the score. A stored text from another score (old reports) is rewritten.
   const safeRecommendation = useMemo(() => {
-    if (recommendation && recommendation.verdict) return recommendation;
-    return generateRecommendation(vehicle, issues, askingPrice);
-  }, [recommendation, vehicle, issues, askingPrice]);
+    if (recommendation && recommendation.verdict && recommendation.score === score.score) return recommendation;
+    return generateRecommendation(vehicle, issues, askingPrice, {
+      recalls, recallSource, sellerRedFlags, listingText, marketValueLow, marketValueHigh, score,
+    });
+  }, [recommendation, vehicle, issues, askingPrice, recalls, recallSource, sellerRedFlags, listingText, marketValueLow, marketValueHigh, score]);
 
   if (!vehicle) {
     return (
@@ -232,6 +262,11 @@ export function ReportView({
       doc.setFont("helvetica", "normal");
     });
 
+    // Idle Score under the vehicle name
+    doc.setTextColor(MUTED);
+    doc.setFontSize(8);
+    doc.text(`Idle Score ${score.score}/100`, MARGIN, infoY + 25);
+
     // Second divider
     const afterHeaderY = infoItems.length > 4 ? infoY + 60 : infoY + 32;
     doc.setDrawColor(...([220,220,220] as [number,number,number]));
@@ -244,7 +279,7 @@ export function ReportView({
     y += 4;
 
     // Verdict badge
-    const verdictKey = safeRecommendation.verdict?.toUpperCase() || "—";
+    const verdictKey = score.verdict.toUpperCase();
     const verdictLabel = verdictKey === "WALKAWAY" ? "WALK AWAY" : verdictKey;
     const badgeColors: Record<string, [number,number,number]> = {
       "BUY": [29,107,67], "NEGOTIATE": [234,88,12], "WALKAWAY": [179,34,40],
@@ -669,6 +704,8 @@ export function ReportView({
             <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:gap-6">
               {/* Left column: verdict, then findings */}
               <div className="contents lg:flex lg:min-w-0 lg:flex-[999_1_600px] lg:flex-col lg:gap-6">
+                <ScoreCard score={score} atOffer={atOffer} />
+
                 <div className="order-2 lg:order-none">
                   <RecommendationCard recommendation={safeRecommendation}>
                     <div className="mt-5 hidden lg:block">
@@ -690,6 +727,7 @@ export function ReportView({
                     active={activeFinding}
                     onActive={setActiveFinding}
                     jump={jump}
+                    impacts={score.issueImpacts}
                   />
                 </div>
               </div>

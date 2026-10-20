@@ -69,6 +69,8 @@ function SharedReport() {
           marketValueLow={report.marketValueLow}
           marketValueHigh={report.marketValueHigh}
           recallSource={report.recallSource}
+          score={report.score}
+          listingText={report.listingText}
           onNewReport={() => { window.location.href = "/"; }}
           shareId={id}
           isSharedView
