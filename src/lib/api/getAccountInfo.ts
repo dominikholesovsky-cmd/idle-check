@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { isAdminEmail, verifyAccessToken } from "./_auth";
+import { verifyAccessToken } from "./_auth";
+import { isAdminEmail } from "./_admin";
 
 // The client uses `isAdmin` only to decide what to show. Every privileged server function checks again.
 export const getAccountInfo = createServerFn({ method: "POST" })

@@ -24,6 +24,7 @@ export function PaymentLoadingView({
   onRetry,
   retryCount = 0,
   email,
+  isAdminRun = false,
 }: {
   onDone: () => void;
   claudePromise: Promise<void>;
@@ -32,6 +33,8 @@ export function PaymentLoadingView({
   retryCount?: number;
   /** Shown here only: this screen is seen just by the person who paid. */
   email?: string;
+  /** Admin unlock: no payment was taken, so no payment or refund wording. */
+  isAdminRun?: boolean;
 }) {
   // The promise that has settled. Comparing it with the current `claudePromise`
   // means a retry (new promise) is never treated as already finished.
@@ -104,7 +107,7 @@ export function PaymentLoadingView({
     ? "Report ready"
     : `Step ${Math.min(doneCount + 1, LABELS.length)} of ${LABELS.length}: ${activeLabel}`;
 
-  const isPermanent = retryCount >= 1;
+  const isPermanent = !isAdminRun && retryCount >= 1;
 
   return (
     <LoadingLayout
@@ -117,7 +120,7 @@ export function PaymentLoadingView({
           >
             <path d="m5 12 5 5 9-10" />
           </svg>
-          Payment confirmed
+          {isAdminRun ? "Admin unlock" : "Payment confirmed"}
         </>
       }
       pillClassName="border-success-border bg-success-bg text-success"
@@ -134,7 +137,14 @@ export function PaymentLoadingView({
           <div className="flex items-start gap-3">
             <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
-              {isPermanent ? (
+              {isAdminRun ? (
+                <>
+                  <p className="font-semibold text-ink">Admin unlock failed</p>
+                  <p className="mt-1 text-sm text-muted-text">
+                    The analysis didn't complete. No payment was taken. You can try again.
+                  </p>
+                </>
+              ) : isPermanent ? (
                 <>
                   <p className="font-semibold text-ink">Analysis failed twice — we'll refund your payment.</p>
                   <p className="mt-1 text-sm text-muted-text">
@@ -149,6 +159,7 @@ export function PaymentLoadingView({
                   </p>
                 </>
               )}
+              {!isAdminRun && (
               <a
                 href={`mailto:${SUPPORT_EMAIL}?subject=Idle Check analysis failed`}
                 className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 rounded text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -156,6 +167,7 @@ export function PaymentLoadingView({
                 <Mail aria-hidden="true" className="h-3.5 w-3.5" />
                 {SUPPORT_EMAIL}
               </a>
+              )}
             </div>
           </div>
           {!isPermanent && (
@@ -181,7 +193,9 @@ export function PaymentLoadingView({
             <path d="m3 7 9 6 9-6" />
           </svg>
           <p className="text-sm leading-[1.45] text-text-2">
-            {email ? (
+            {isAdminRun ? (
+              "Keep this tab open. Admin unlock: no payment and no email are sent."
+            ) : email ? (
               <>
                 Keep this tab open. We'll also email a link to the report to{" "}
                 <span className="font-semibold break-all">{email}</span>. It stays saved under that address.

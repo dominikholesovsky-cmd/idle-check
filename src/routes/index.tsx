@@ -677,6 +677,7 @@ function Index() {
             onRetry={handleRetry}
             retryCount={retryCount}
             email={analysis.email}
+            isAdminRun={!!activeSessionRef.current && isAdminSession(activeSessionRef.current.sessionId)}
           />
         )}
 
